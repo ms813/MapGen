@@ -4,6 +4,8 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
+using System.Drawing;
+
 using SFML.Graphics;
 using SFML.System;
 
@@ -11,63 +13,61 @@ namespace ReSource
 {
     class MapTile
     {
+        /*
+         * For any map
+         */
+        //General
         public Vector2i GlobalIndex { get; private set; }   //id in the whole world
-        public int ChunkIndex { get; private set; }    //id within its own chunk (0–255)
         private WorldMap ParentMap;
-        public bool border { get; private set; }         
-
         public List<MapTile> OrthogonalNeighbours = new List<MapTile>();
         public List<MapTile> DiagonalNeighbours = new List<MapTile>();
+        private int tileSize;          
         
-        /*
-         * Rendering parameters
-         * 
-         *  A MapTileData object is used to pass data loaded from file to the MapTile object
-         *  and unpacked into the variables below
-         */        
+        //rivers
+        public Vector2i DownslopeDir { get; set; }
+        public int RiverVolume { get; set; }
+        public bool RiverSource = false;
+        public bool DownhillToSea = false;
 
-        private int tileSize;
-        public Color ElevationColor { get; set; }
+        //water & moisture
+        public double Moisture { get; set; }
+        public WaterType Water { get; set; }        
+        public bool Coast = false;
+        
+        //Biome
+        public Biome Biome { get; set; }
+        
+        //colors for the map view
+        public Color DisplayColour;    
 
         /*
-         * Biome parameters
+         * For 'noise' maps
          */
         public double Elevation { get; set; }
         public double Perlin { get; set; }
         public double Voronoi { get; set; }
         public double Gaussian { get; set; }
 
-        public Vector2i DownslopeDir { get; set; }
-
-        public double Moisture { get;  set; }        
-        public Color MoistureColor { get; private set; }
-
-        public WaterType Water { get; set; }        
-        public int RiverVolume { get; set; }
-        public bool RiverSource = false;
-        public bool Coast = false;
-        public bool DownhillToSea = false;
-
-        public Biome Biome { get; set; }
-
+        /*
+         * For 'plate' maps
+         */
+        public int PlateId = -1;    //-1 represents unassigned
+        public bool PlateBoundary = false;
+        public double Pressure = 0;
+        public double Shear = 0;
+        public PlateBoundaryType BoundaryType = PlateBoundaryType.NotBoundary;
+        public MapTile ClosestBoundaryTile;
+        
         public MapTile(WorldMap parentMap, Vector2i globalIndex, int tileSize)
         {
             this.ParentMap = parentMap;
             this.tileSize = tileSize;
             this.GlobalIndex = globalIndex;          
             
-            Water = WaterType.Unassigned;
-
-            if(globalIndex.X <= 0 
-                || globalIndex.Y <= 0 
-                || globalIndex.X >= ParentMap.MapSize.X - 1
-                || globalIndex.Y >= ParentMap.MapSize.Y - 1)
-            {
-                border = true;
-            }            
+            Water = WaterType.Unassigned;       
         }    
        
-        public void UpdateElevationColor()
+        public void SetElevationColor()
         {
             Color color = new Color();
             color.A = 255;
@@ -76,16 +76,16 @@ namespace ReSource
             switch(Water)
             {                     
                 case WaterType.Land:
-                    interpolate = MathHelper.Scale(0, ParentMap.MaxElevation, 0, 255, Elevation);
+                    interpolate = MathHelper.Scale(0, WorldMap.MaxElevation, 0, 255, Elevation);
                     color.R = (byte)Math.Floor(interpolate);
                     color.G = (byte)Math.Floor(255d - interpolate);
                     break;
                 case WaterType.Ocean:
-                    interpolate = MathHelper.Scale(0, ParentMap.SeaLevel, 0, 255, Elevation);
+                    interpolate = MathHelper.Scale(0, WorldMap.SeaLevel, 0, 255, Elevation);
                     color.B = (byte)Math.Floor(interpolate-255d);
                     break;
                 case WaterType.Lake:
-                    interpolate = MathHelper.Scale(0, ParentMap.SeaLevel, 0, 255, Elevation);
+                    interpolate = MathHelper.Scale(0, WorldMap.SeaLevel, 0, 255, Elevation);
                     color.B = (byte)Math.Floor(interpolate - 255d);
                     color.G = (byte)Math.Floor(interpolate - 255d);
                     break;
@@ -107,10 +107,10 @@ namespace ReSource
                 color = Color.Cyan;
             }            
     
-            ElevationColor = color;
+            DisplayColour = color;
         }  
 
-        public void UpdateMoistureColor()
+        public void SetMoistureColor()
         {
             if (Water != WaterType.Ocean)
             {
@@ -120,13 +120,23 @@ namespace ReSource
                 c.R = (byte)(255 - interpolate);
                 c.G = (byte)(interpolate);
 
-                MoistureColor = c;
+                DisplayColour = c;
             }            
+        }
+        
+        public void SetPlateColor()
+        {
+            DisplayColour = ColorLookup.Color[PlateId % ColorLookup.Color.Count()];
+        }
+
+        public void SetBiomeColor()
+        {
+            DisplayColour = Biome.Color;
         }
        
         public void Update(float dt)
         {
 
-        }
+        }     
     }
 }

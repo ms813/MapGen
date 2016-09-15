@@ -98,12 +98,14 @@
   <ItemGroup>
     <Compile Include="ActionState.cs" />
     <Compile Include="Biome.cs" />
+    <Compile Include="ColorLookup.cs" />
     <Compile Include="Direction.cs" />
     <Compile Include="Game.cs" />
     <Compile Include="GameState.cs" />
     <Compile Include="MapMoveEventArgs.cs" />
-    <Compile Include="MapViewType.cs" />
+    <Compile Include="PlateBoundaryType.cs" />
     <Compile Include="RandomWalker.cs" />
+    <Compile Include="TectonicPlate.cs" />
     <Compile Include="WaterType.cs" />
     <Compile Include="WorldMap.cs" />
     <Compile Include="MapTile.cs" />

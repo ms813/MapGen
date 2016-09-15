@@ -14,6 +14,7 @@ namespace ReSource
     class WorldMap
     {   
         private Dictionary<Vector2i, MapTile> Tiles = new Dictionary<Vector2i, MapTile>();
+        private List<TectonicPlate> PlateList = new List<TectonicPlate>();
         private List<Vector2i> ActiveTileIndices = new List<Vector2i>();
 
         private RectangleShape HighlightShape;
@@ -21,49 +22,71 @@ namespace ReSource
         private VertexArray downslopeArrows;
         private bool drawDownslopes = false;
         private bool drawRandomWalks = false;
-        private MapViewType mapViewType = MapViewType.Elevation;
 
         public static Font Font = new Font(@"..\..\..\resources\fonts\arial.ttf");
 
-        public int TileSize = 32;        
+        public readonly int TileSize = 32;        
 
-        public float MaxElevation = 1.0f;
-        public float MinElevation = 0.0f;
-        public float SeaLevel = 0.2f;
-        double mountainThreshold = 0.45d;       //cutoff height for a tile to be considered a mountain
+        public static readonly float MaxElevation = 1.0f;
+        public static readonly float MinElevation = 0.0f;
+        public static readonly float SeaLevel = 0.2f;
+        public static readonly float mountainThreshold = 0.45f;       //cutoff height for a tile to be considered a mountain
 
-        public Vector2i MapSize { get; private set; }        
-        
-        public static readonly bool SpriteDraw = false;
+        public Vector2i MapSize { get; private set; }
+
+        private string mapType = "plate";
+        //private String mapType = "noise";
 
         public WorldMap(Vector2i mapSize)
         {
             this.MapSize = mapSize;
             
+
             ExecuteTimedFunction(CreateTiles);
             ExecuteTimedFunction(AssignTileNeighbours);
-            ExecuteTimedFunction(() => GenerateRandomWalks(true, true, 8,8,5), "Generate Random Walks");
-            ExecuteTimedFunction(CalculatePerlinCoefficients);
-            ExecuteTimedFunction(CalculateGaussianCoefficients);
-            ExecuteTimedFunction(CalculateVoronoiCoefficients);
-            ExecuteTimedFunction(NormaliseAndSetTileElevations);
-            ExecuteTimedFunction(RescaleElevation);
-            ExecuteTimedFunction(AssignOcean);
-            ExecuteTimedFunction(AssignCoast);
-            ExecuteTimedFunction(AssignDownslopes);
-            ExecuteTimedFunction(() =>
+            Console.WriteLine("Preparing to build '{0}' type map", mapType);
+            if(mapType == "noise")
             {
-                List<MapTile> riverSources = GenerateRiverSources((int)Math.Sqrt(mapSize.Y) * 2);
-                foreach (MapTile t in riverSources)
+                ExecuteTimedFunction(() => GenerateRandomWalks(true, true, 8,8,5), "Generate Random Walks");
+                ExecuteTimedFunction(CalculatePerlinCoefficients);
+                ExecuteTimedFunction(CalculateGaussianCoefficients);
+                ExecuteTimedFunction(CalculateVoronoiCoefficients);
+                ExecuteTimedFunction(SetTileElevations);
+                ExecuteTimedFunction(RescaleElevation);
+                ExecuteTimedFunction(AssignOcean);
+                ExecuteTimedFunction(AssignCoast);
+                ExecuteTimedFunction(AssignDownslopes);                
+                ExecuteTimedFunction(() =>
                 {
-                    ExtendRiverFromSource(t);
-                }
-            }, "Create Rivers");
-            ExecuteTimedFunction(AssignMoisture);
-            ExecuteTimedFunction(AssignBiomes);
-            ExecuteTimedFunction(InitialiseDisplay);
-            ExecuteTimedFunction(CreateVertexArray);            
-            
+                    List<MapTile> riverSources = GenerateRiverSources((int)Math.Sqrt(mapSize.Y) * 2);
+                    foreach (MapTile t in riverSources)
+                    {
+                        ExtendRiverFromSource(t);
+                    }
+                }, "Create Rivers");
+                ExecuteTimedFunction(AssignMoisture);
+                ExecuteTimedFunction(AssignBiomes);
+                
+                ExecuteTimedFunction(InitialiseDisplay);
+                ExecuteTimedFunction(CreateVertexArray);            
+
+            } else if(mapType == "plate")
+            {
+                ExecuteTimedFunction(() => AssignTectonicPlates(MapSize.Y / 4), "Assign Tectonic Plates");
+                ExecuteTimedFunction(CalculatePerlinCoefficients);
+                ExecuteTimedFunction(CalculatePlateBoundaryPressure);                
+                ExecuteTimedFunction(CalculatePlateBoundaryShear);
+                ExecuteTimedFunction(AssignPlateBoundaryElevations);
+                ExecuteTimedFunction(AssignNearestBoundaries);
+                ExecuteTimedFunction(InterpolatePlateElevations);
+                
+                ExecuteTimedFunction(RescaleElevation);
+                ExecuteTimedFunction(AssignPlateOcean);
+                //ExecuteTimedFunction(AssignCoast);
+                ExecuteTimedFunction(InitialiseDisplay);
+                ExecuteTimedFunction(CreateVertexArray); 
+            }
+                        
             Console.WriteLine("Build finished in {0} s", TotalBuildTime/1000d);
         }
 
@@ -78,6 +101,14 @@ namespace ReSource
             watch.Stop();
             TotalBuildTime += watch.ElapsedMilliseconds;
             Console.WriteLine("... finished in {0} s", watch.ElapsedMilliseconds / 1000d);
+        }
+
+        private bool IsMapBorder(MapTile t)
+        {
+            return (t.GlobalIndex.X == 0) 
+                || (t.GlobalIndex.Y == 0) 
+                || (t.GlobalIndex.X == MapSize.X - 1) 
+                || (t.GlobalIndex.Y == MapSize.Y - 1);
         }
 
         private void CreateTiles()
@@ -100,6 +131,7 @@ namespace ReSource
             {
                 SetTilePerlin(t);
             }
+            NormalisePerlinCoefficients();
         }
 
         private void CalculateGaussianCoefficients()
@@ -132,6 +164,8 @@ namespace ReSource
             });
             Console.SetCursorPosition(System.Reflection.MethodBase.GetCurrentMethod().Name.Length, Console.CursorTop);
             timer.Dispose();
+
+            NormaliseVoronoiCoefficients();
         }
 
         private void AssignTileNeighbours()
@@ -158,13 +192,8 @@ namespace ReSource
             });         
         }
         
-        private void NormaliseAndSetTileElevations()
+        private void SetTileElevations()
         {
-            //normalise the coefficients on each tile
-            NormalisePerlinCoefficients();
-            NormaliseVoronoiCoefficients();
-
-
             //multiply the weighting factors to get the final elevations
             foreach (MapTile tile in Tiles.Values)
             {
@@ -172,23 +201,14 @@ namespace ReSource
                 tile.Elevation = tile.Perlin * tile.Voronoi;
             }
         }
-        
-        /*
-        private void NormaliseAndSetTileElevations()     
-        {
-            foreach(MapTile t in Tiles.Values)
-            {
-                t.Elevation = t.Gaussian * Math.Sin(4 *  t.GlobalIndex.X * Math.PI / 180) + Math.Cos(4 * t.GlobalIndex.Y * Math.PI / 180);
-            }
-        }
-        */
+     
         private void InitialiseDisplay()
         {
-
             foreach (MapTile tile in Tiles.Values)
             {
-                tile.UpdateElevationColor();
-                tile.UpdateMoistureColor();
+                
+                tile.SetMoistureColor();
+                tile.SetPlateColor();
             }
             //activate tiles in the middle of the view            
             ActivateTilesAround((int)Math.Floor(MapSize.X / 2d), (int)Math.Floor(MapSize.Y / 2d), 1);
@@ -206,18 +226,7 @@ namespace ReSource
            
             foreach(MapTile tile in Tiles.Values)
             {
-                Color c;
-                if(mapViewType == MapViewType.Elevation)
-                {
-                    c = tile.ElevationColor;
-                }
-                else if(mapViewType == MapViewType.Moisture)
-                {
-                    c = tile.MoistureColor;
-                } else
-                {
-                    c = tile.Biome.Color;
-                }
+                Color c = tile.DisplayColour;
 
                 Vertex vertex = new Vertex();
                 vertex.Position = new Vector2f(tile.GlobalIndex.X, tile.GlobalIndex.Y) * TileSize;                
@@ -284,7 +293,8 @@ namespace ReSource
                 for(int y = 0; y < MapSize.Y; y++)
                 {
                     MapTile tile = GetTileByIndex(x, y);
-                    if (tile.border && tile.Elevation < SeaLevel)
+                    
+                    if (IsMapBorder(tile) && tile.Elevation < SeaLevel)
                     {
                         tile.Water = WaterType.Ocean;
                         fillQ.Enqueue(tile);
@@ -299,14 +309,13 @@ namespace ReSource
                 
                 foreach(MapTile neighbour in tile.OrthogonalNeighbours)
                 {
-                    if(neighbour != null)
+                    if (neighbour != null
+                        && neighbour.Elevation < SeaLevel
+                        && neighbour.Water == WaterType.Unassigned)
                     {
-                        if (neighbour.Elevation < SeaLevel && neighbour.Water == WaterType.Unassigned)
-                        {
-                            neighbour.Water = WaterType.Ocean;
-                            fillQ.Enqueue(neighbour);
-                        }
-                    }                    
+                        neighbour.Water = WaterType.Ocean;
+                        fillQ.Enqueue(neighbour);
+                    }
                 }                
             }
 
@@ -557,8 +566,15 @@ namespace ReSource
 
             foreach (MapTile t in Tiles.Values)
             {
-                t.Elevation = MathHelper.Scale(min, max, MinElevation, MaxElevation, t.Elevation);                  
+                t.Elevation = MathHelper.Scale(min, max, MinElevation, MaxElevation, t.Elevation);
+                if (t.Elevation > MaxElevation || t.Elevation < MinElevation)
+                {
+                    Console.ForegroundColor = ConsoleColor.Red;
+                    Console.WriteLine("fukt!");
+                    Console.ForegroundColor = ConsoleColor.Black;
+                }
             }
+            
         }      
        
         private void AssignDownslopes()
@@ -695,7 +711,6 @@ namespace ReSource
                 }
             }
             tile.Moisture = Math.Pow(moistureConst, minFreshWaterDist);
-            if (tile.Moisture > 1) Console.WriteLine("moisture > 1");
         }
 
         private void AssignBiomes()
@@ -842,9 +857,10 @@ namespace ReSource
             if(t != null && e.Button == Mouse.Button.Right)
             {              
                 Console.WriteLine("Clicked tileIndex: ({0}, {1}), z = {2}, water = {3}", x, y, t.Elevation, t.Water);
-                Console.WriteLine("WorldPos: ({0},{1})", index.X, index.Y);
-                Console.WriteLine("DownslopeDir: ({0},{1}), Downhill to sea:{2}", t.DownslopeDir.X, t.DownslopeDir.Y, t.DownhillToSea);
-                Console.WriteLine("River volume: {0}. River source: {1}", t.RiverVolume, t.RiverSource);
+                Console.WriteLine("PlateID: {0}, Plate Edge: {1}, Oceanic: {2}", t.PlateId, t.PlateBoundary, PlateList[t.PlateId].Oceanic);
+                //Console.WriteLine("WorldPos: ({0},{1})", index.X, index.Y);
+                //Console.WriteLine("DownslopeDir: ({0},{1}), Downhill to sea:{2}", t.DownslopeDir.X, t.DownslopeDir.Y, t.DownhillToSea);
+                //Console.WriteLine("River volume: {0}. River source: {1}", t.RiverVolume, t.RiverSource);
                 Console.WriteLine();
             }           
         }
@@ -861,17 +877,36 @@ namespace ReSource
             }
             if(e.Code == Keyboard.Key.M)
             {
-                mapViewType = MapViewType.Moisture;
+                foreach (MapTile t in Tiles.Values)
+                {
+                    t.SetMoistureColor();
+                }  
                 CreateVertexArray();
             }
             if(e.Code == Keyboard.Key.B)
             {
-                mapViewType = MapViewType.Biome;
+                foreach(MapTile t in Tiles.Values)
+                {
+                    t.SetBiomeColor();
+                }                
                 CreateVertexArray();
             }
             if (e.Code == Keyboard.Key.E)
             {
-                mapViewType = MapViewType.Elevation;
+                foreach (MapTile t in Tiles.Values)
+                {
+                    t.SetElevationColor();
+                }  
+                CreateVertexArray();
+                
+            }
+            if(e.Code == Keyboard.Key.T)
+            {
+                foreach (MapTile t in Tiles.Values)
+                {
+                    t.SetPlateColor();
+                }  
+
                 CreateVertexArray();
             }
         }
@@ -915,5 +950,327 @@ namespace ReSource
                 }
             }
         }        
+
+        private void AssignTectonicPlates(int plateCount)
+        {           
+            Queue<MapTile> fillQ = new Queue<MapTile>();
+            for(int i = 0; i < plateCount; i++)
+            {                
+                Vector2i rnd;
+                do{
+                    rnd = new Vector2i(MathHelper.rnd.Next(MapSize.X), MathHelper.rnd.Next(MapSize.Y));
+                } while(GetTileByIndex(rnd).PlateId != -1);                              
+
+                MapTile plateCenter = GetTileByIndex(rnd);
+                plateCenter.PlateId = i;
+                fillQ.Enqueue(plateCenter);
+
+                TectonicPlate plate = new TectonicPlate(i, plateCenter);
+                PlateList.Add(plate);
+            }
+
+            //flood fill all plate centers at the same time
+            while(fillQ.Count > 0)
+            {
+                MapTile tile = fillQ.Dequeue();
+
+                //shuffle neighbours so that there is no preferred flood direction
+                IEnumerable<MapTile> shuffledNeighbours = tile.OrthogonalNeighbours.OrderBy(t => MathHelper.rnd.NextDouble());
+                foreach (MapTile n in shuffledNeighbours)
+                {                    
+                    //if the neighbour hasnt yet been assigned a plate ID then keep growing
+                    if(n.PlateId == -1)
+                    {
+                        //otherwise the plate is still growing so make the neighbour tile have the same plate ID
+                        //as the current tile and continue flood filling
+                        n.PlateId = tile.PlateId;
+                        fillQ.Enqueue(n);
+                                                
+                        PlateList[n.PlateId].AddTile(n);
+
+                        n.Elevation = n.PlateId; //debug
+                    }      
+                    
+                    if(n.PlateId != tile.PlateId)
+                    {
+                        n.PlateBoundary = true;
+                        tile.PlateBoundary = true;
+                    }
+                }
+            }       
+        }
+
+        //doesnt work correctly for tiles bordering 3 plates
+        private void CalculatePlateBoundaryPressure()
+        {
+            //get a list of only tiles at plate edges
+            IEnumerable<MapTile> plateEdgeTiles = Tiles.Values.Where(t => t.PlateBoundary);
+            //loop over the edge tiles
+            foreach(MapTile t in plateEdgeTiles)
+            {
+                CalculateTilePressure(t);
+            }
+
+            //normalisation
+            //find the min and max pressure values
+            double minP = Double.MaxValue;
+            double maxP = Double.MinValue;
+            foreach(MapTile t in plateEdgeTiles)
+            {
+                if (t.Pressure < minP) minP = t.Pressure;
+                if (t.Pressure > maxP) maxP = t.Pressure;
+            }
+
+            //normalise to the range -1, 1
+            foreach(MapTile t in plateEdgeTiles)
+            {
+                t.Pressure = MathHelper.Scale(minP, maxP, -1, 1, t.Pressure);
+            }
+        }
+
+        private void CalculateTilePressure(MapTile t)
+        {
+            Vector2f boundaryPerpendicular = new Vector2f(0, 0);
+            int neighbourPlateId = -1;
+            foreach(MapTile n in t.OrthogonalNeighbours)
+            {
+                //check which neighbours are on a different plate
+                if(t.PlateId != n.PlateId)
+                {
+                    //tally the direction between neighbours to work out where the boundary is
+                    boundaryPerpendicular += (Vector2f)(n.GlobalIndex - t.GlobalIndex);
+
+                    if(neighbourPlateId == -1) neighbourPlateId = n.PlateId;
+                }
+            }
+            //normalise to get the unit vector perpendicular to the boundary
+            boundaryPerpendicular = MathHelper.Normalise(boundaryPerpendicular);
+
+            //Now we know the direction of the border.
+            //To get the force acting in that direction we add the plate drift vectors
+            //and take the dot product with the border direction
+            Vector2f relativePlateMovement = PlateList[neighbourPlateId].Drift - PlateList[t.PlateId].Drift;
+                
+            t.Pressure = MathHelper.Dot(relativePlateMovement, boundaryPerpendicular);
+        }
+
+        private void CalculatePlateBoundaryShear()
+        {
+            //get a list of only tiles at plate edges
+            IEnumerable<MapTile> plateEdgeTiles = Tiles.Values.Where(t => t.PlateBoundary);
+            //loop over the edge tiles
+            foreach (MapTile t in plateEdgeTiles)
+            {
+                CalculateTileShear(t);
+            }
+
+            //normalisation
+            //find the min and max shear values
+            double minS = Double.MaxValue;
+            double maxS = Double.MinValue;
+            foreach (MapTile t in plateEdgeTiles)
+            {
+                if (t.Pressure < minS) minS = t.Shear;
+                if (t.Pressure > maxS) maxS = t.Shear;
+            }
+
+            //normalise to the range  0, 1
+            foreach (MapTile t in plateEdgeTiles)
+            {
+                t.Shear = MathHelper.Scale(minS, maxS, 0, 1, t.Shear);
+            }
+        }
+
+        private void CalculateTileShear(MapTile t)
+        {
+            Vector2f boundaryParallel = new Vector2f(0, 0);
+            int neighbourPlateId = -1;
+            foreach(MapTile n in t.OrthogonalNeighbours)
+            {
+                //check which neighbours are on a different plate
+                if(t.PlateId != n.PlateId)
+                {
+                    //tally the direction between neighbours to work out where the boundary is
+                    boundaryParallel += (Vector2f)(n.GlobalIndex - t.GlobalIndex);
+
+                    if(neighbourPlateId == -1) neighbourPlateId = n.PlateId;
+                }
+            }
+
+            boundaryParallel = MathHelper.UnitNormal(boundaryParallel);
+
+            //first get the distance from the tile to each plate's center
+            double plate1RotForce = MathHelper.Magnitude((Vector2f)PlateList[t.PlateId].Centertile.GlobalIndex - (Vector2f)t.GlobalIndex);
+            double plate2RotForce = MathHelper.Magnitude((Vector2f)PlateList[neighbourPlateId].Centertile.GlobalIndex - (Vector2f)t.GlobalIndex);
+
+            //then calculate the 'torque' by multiplying the plate rotation by the distance
+            //to the plate's rotation axis (the plate center tile)
+
+            plate1RotForce *= PlateList[t.PlateId].Rotation;
+            plate2RotForce *= PlateList[neighbourPlateId].Rotation;
+
+            //only magnitude matters so ignore sign
+            t.Shear = Math.Abs(plate1RotForce - plate2RotForce);            
+        }
+
+        double forceDominanceParam = 0.3f;
+        private void AssignPlateBoundaryElevations()
+        {
+            IEnumerable<MapTile> plateEdgeTiles = Tiles.Values.Where(t => t.PlateBoundary);
+
+            foreach(MapTile t in plateEdgeTiles)
+            {
+                if(t.Pressure > (t.Shear + forceDominanceParam))
+                {
+                    //positive pressure is the dominant force
+                    CalculateCollidingBoundaryElevation(t);
+                    t.BoundaryType = PlateBoundaryType.Colliding;
+                } 
+                else if (Math.Abs(t.Pressure) > (t.Shear + forceDominanceParam))
+                {
+                    //negative pressure is the dominant force
+                    CalculateRecedingBoundaryElevation(t);
+                    t.BoundaryType = PlateBoundaryType.Receding;
+                }
+                else if((Math.Abs(t.Pressure) + forceDominanceParam) < t.Shear)
+                {
+                    //shear is the dominant force
+                    CalculateShearBoundaryElevation(t);
+                    t.BoundaryType = PlateBoundaryType.Shear;
+                }
+                else
+                {
+                    //no dominant force
+                    CalculateMixedBoundaryElevation(t);
+                    t.BoundaryType = PlateBoundaryType.Mixed;
+                }
+            }
+        }
+                
+        private void CalculateCollidingBoundaryElevation(MapTile t)
+        {
+            int collidingPlateId = -1;
+            foreach(MapTile n in t.OrthogonalNeighbours)
+            {
+                if(t.PlateId != n.PlateId)
+                {
+                    collidingPlateId = n.PlateId;
+                }
+            }
+
+            if(PlateList[collidingPlateId].Oceanic == PlateList[t.PlateId].Oceanic)
+            {
+                //both plates are either oceanic or continental, so collide directly
+                t.Elevation = (PlateList[t.PlateId].MaxElevation + PlateList[collidingPlateId].MaxElevation);
+                t.Elevation *= (1 + t.Pressure); //add 1 so 1 < p < 2
+            }
+            else
+            {
+                //one plate is ocean and the other is continental, so subduct the oceanic plate
+                if(PlateList[t.PlateId].Oceanic)
+                {
+                    //current plate is being pushed down
+                    t.Elevation = PlateList[t.PlateId].MinElevation;
+                }
+                else
+                {
+                    //current plate is going over the other plate
+                    t.Elevation = PlateList[t.PlateId].MinElevation * (1 + t.Pressure);
+                }
+            }
+        }
+
+        private void CalculateRecedingBoundaryElevation(MapTile t)
+        {
+            t.Elevation = PlateList[t.PlateId].MaxElevation * (1 + Math.Abs(t.Pressure) / 4);
+        }
+
+        private void CalculateShearBoundaryElevation(MapTile t) 
+        {
+            t.Elevation = PlateList[t.PlateId].MaxElevation * (1 + Math.Abs(t.Shear) / 4);
+        }
+        private void CalculateMixedBoundaryElevation(MapTile t)
+        {
+            int collidingPlateId = -1;
+            foreach(MapTile n in t.OrthogonalNeighbours)
+            {
+                if(t.PlateId != n.PlateId)
+                {
+                    collidingPlateId = n.PlateId;
+                }
+            }
+            t.Elevation = 0.5d * (PlateList[t.PlateId].MaxElevation + PlateList[collidingPlateId].MaxElevation);
+        }
+
+        private void AssignPlateOcean()
+        {
+            foreach(MapTile t in Tiles.Values)
+            {
+                /*
+                if(t.Elevation < SeaLevel)
+                {
+                    t.Water = WaterType.Ocean;
+                }
+                else
+                {
+                    t.Water = WaterType.Land;
+                }
+                 * */
+
+                if (PlateList[t.PlateId].Oceanic)
+                {
+                    t.Water = WaterType.Ocean;
+                }
+                else
+                {
+                    t.Water = WaterType.Land;
+                }               
+            }
+        }
+
+        private void AssignNearestBoundaries()
+        {
+            Parallel.ForEach(PlateList, plate =>
+            {
+                Parallel.ForEach(plate.PlateTiles, tile => AssignTileNearestBoundary(tile, plate));
+            });
+        }
+
+        private void AssignTileNearestBoundary(MapTile t, TectonicPlate p)
+        {
+            int min = Int32.MaxValue;
+            MapTile closestBoundary= p.PlateTiles[0];
+            foreach(MapTile b in p.PlateTiles.Where(x => x.PlateBoundary))
+            {
+                Vector2i dir = t.GlobalIndex - b.GlobalIndex;
+                int dist = Math.Abs(dir.X) + Math.Abs(dir.Y);
+                if(dist < min)
+                {
+                    min = dist;
+                    closestBoundary = b;
+                }
+            }
+
+            t.ClosestBoundaryTile = closestBoundary;
+        }
+        double PlateCollisionConst = 0.5d;
+        private void InterpolatePlateElevations()
+        {
+            foreach(TectonicPlate plate in PlateList)
+            {
+                IEnumerable<MapTile> orderedTiles = plate.PlateTiles.OrderBy(t =>                
+                    MathHelper.Magnitude((Vector2f)t.GlobalIndex - (Vector2f)plate.Centertile.GlobalIndex));
+
+                foreach(MapTile t in orderedTiles)
+                {
+                    double distFromBoundary = MathHelper.Magnitude((Vector2f)t.GlobalIndex - (Vector2f)t.ClosestBoundaryTile.GlobalIndex);
+                    double distFromBoundaryToCenter = MathHelper.Magnitude((Vector2f)t.ClosestBoundaryTile.GlobalIndex - (Vector2f)plate.Centertile.GlobalIndex);
+
+                    double fractionalDist = distFromBoundary / distFromBoundaryToCenter;
+                    
+                    t.Elevation = MathHelper.Scale(0, 1, plate.MinElevation, plate.MaxElevation, Math.Pow(PlateCollisionConst, fractionalDist));
+                }                
+            }
+        }
     }
 }

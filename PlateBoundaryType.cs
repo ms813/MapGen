@@ -6,10 +6,12 @@ using System.Threading.Tasks;
 
 namespace ReSource
 {
-    enum MapViewType
+    enum PlateBoundaryType
     {
-        Elevation,
-        Moisture,
-        Biome
+        Colliding,
+        Receding,
+        Shear,
+        Mixed,
+        NotBoundary
     }
 }
