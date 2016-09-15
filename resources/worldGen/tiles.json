@@ -1,0 +1,32 @@
+[
+	{
+		"tile_name"	:	"grass",
+		"variants"	:	"1",
+		"anim_frames" :	"0"
+	},
+	{
+		"tile_name"	:	"sand",
+		"variants"	:	"1",
+		"anim_frames" :	"0"
+	},
+	{
+		"tile_name"	:	"rock",
+		"variants"	:	"1",
+		"anim_frames" :	"0"
+	},
+	{
+		"tile_name"	:	"tree_leafy",
+		"variants"	:	"4",
+		"anim_frames" :	"0"
+	},
+	{
+		"tile_name"	:	"tree_dead",
+		"variants"	:	"2",
+		"anim_frames" :	"0"
+	},
+	{
+		"tile_name"	:	"bush",
+		"variants"	:	"1",
+		"anim_frames" :	"0"
+	}
+]

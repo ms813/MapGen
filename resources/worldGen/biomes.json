@@ -1,0 +1,27 @@
+[
+	{
+		"biome_name"	:	"plains",
+		"default_tile"	:	"grass",
+		"special" : [			
+			{"tile_name" : "sand", 		"rarity": "8", 		"avg_size" : "8"},
+			{"tile_name" : "rock", 		"rarity": "8", 		"avg_size" : "4"},
+			{"tile_name" : "tree_leafy", "rarity": "16", 	"avg_size" : "1"},
+			{"tile_name" : "tree_dead", "rarity": "16", 	"avg_size" : "1"},
+			{"tile_name" : "bush", 		"rarity": "8", 		"avg_size" : "8"}			
+		]
+	},
+	{
+		"biome_name"	:	"desert",
+		"default_tile"	:	"sand",
+		"special" : [			
+			{"tile_name" : "rock", 		"rarity": "8", 		"avg_size" : "4"}	
+		]
+	},
+	{
+		"biome_name"	:	"forest",
+		"default_tile"	:	"tree_leafy",
+		"special" : [			
+			{"tile_name" : "grass", "rarity": "16", 	"avg_size" : "1"}						
+		]
+	}
+]
