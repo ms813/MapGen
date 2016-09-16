@@ -101,9 +101,12 @@
     <Compile Include="Direction.cs" />
     <Compile Include="Game.cs" />
     <Compile Include="GameState.cs" />
+    <Compile Include="Latitude.cs" />
     <Compile Include="MapMoveEventArgs.cs" />
     <Compile Include="RandomWalker.cs" />
     <Compile Include="WaterType.cs" />
+    <Compile Include="WindHelper.cs" />
+    <Compile Include="WindColorMap.cs" />
     <Compile Include="WorldMap.cs" />
     <Compile Include="MapTile.cs" />
     <Compile Include="MathHelper.cs" />

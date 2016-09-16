@@ -21,15 +21,16 @@ namespace ReSource
         private VertexArray downslopeArrows;
         private bool drawDownslopes = false;
         private bool drawRandomWalks = false;
+        private bool drawWind = false;
 
         public static Font Font = new Font(@"..\..\..\resources\fonts\arial.ttf");
 
         public int TileSize = 32;        
 
-        public float MaxElevation = 1.0f;
-        public float MinElevation = 0.0f;
-        public float SeaLevel = 0.2f;
-        double mountainThreshold = 0.45d;       //cutoff height for a tile to be considered a mountain
+        public readonly float MaxElevation = 1.0f;
+        public readonly float MinElevation = 0.0f;
+        public readonly float SeaLevel = 0.2f;
+        public readonly double mountainThreshold = 0.45d;       //cutoff height for a tile to be considered a mountain
 
         public Vector2i MapSize { get; private set; }        
         
@@ -50,6 +51,7 @@ namespace ReSource
             ExecuteTimedFunction(AssignOcean);
             ExecuteTimedFunction(AssignCoast);
             ExecuteTimedFunction(AssignDownslopes);
+            ExecuteTimedFunction(GenerateWind);
             ExecuteTimedFunction(CreateRivers);            
             ExecuteTimedFunction(AssignMoisture);
             ExecuteTimedFunction(AssignBiomes);
@@ -209,6 +211,7 @@ namespace ReSource
 
         private void CalculatePerlinCoefficients()
         {
+            PerlinGenerator.Randomise();
             foreach(MapTile t in Tiles.Values)
             {
                 SetTilePerlin(t);
@@ -229,24 +232,12 @@ namespace ReSource
         private void NormalisePerlinCoefficients()
         {
             //get highest and lowest elevations and normalise to world min and max
-            double min = Double.MaxValue;
-            double max = Double.MinValue;
-            foreach (MapTile tile in Tiles.Values)
-            {
-                if (tile.Perlin < min)
-                {
-                    min = tile.Perlin;
-                }
-
-                if (tile.Perlin > max)
-                {
-                    max = tile.Perlin;
-                }
-            }
+            double min = Tiles.Values.Min(t => t.Perlin);
+            double max = Tiles.Values.Max(t => t.Perlin);            
 
             foreach (MapTile t in Tiles.Values)
             {
-                t.Perlin = MathHelper.Scale(min, max, 0, 1, t.Perlin);
+                t.Perlin = MathHelper.Scale(min, max, 0, 1, t.Perlin);                
             }
         }
 
@@ -316,21 +307,9 @@ namespace ReSource
         private void NormaliseVoronoiCoefficients()
         {
             //get highest and lowest elevations and normalise to world min and max
-            double min = Double.MaxValue;
-            double max = Double.MinValue;
-            foreach (MapTile tile in Tiles.Values)
-            {
-                if (tile.Voronoi < min)
-                {
-                    min = tile.Voronoi;
-                }
-
-                if (tile.Voronoi > max)
-                {
-                    max = tile.Voronoi;
-                }
-            }
-
+            double min = Tiles.Values.Min(t => t.Voronoi);
+            double max = Tiles.Values.Max(t => t.Voronoi);
+         
             foreach (MapTile t in Tiles.Values)
             {
                 t.Voronoi = MathHelper.Scale(min, max, 0.1, 1.5, t.Voronoi);
@@ -350,20 +329,8 @@ namespace ReSource
         private void RescaleElevation()
         {
             //get highest and lowest elevations and normalise to world min and max
-            double min = Double.MaxValue;
-            double max = Double.MinValue;
-            foreach (MapTile tile in Tiles.Values)
-            {
-                if (tile.Elevation < min)
-                {
-                    min = tile.Elevation;
-                }
-
-                if (tile.Elevation > max)
-                {
-                    max = tile.Elevation;
-                }
-            }
+            double min = Tiles.Values.Min(t => t.Elevation);
+            double max = Tiles.Values.Max(t => t.Elevation);
 
             foreach (MapTile t in Tiles.Values)
             {
@@ -501,6 +468,36 @@ namespace ReSource
                 }
             }
         }
+
+        private void GenerateWind()
+        {
+            //assign each tile a wind direction
+            foreach (MapTile t in Tiles.Values)
+            {
+                t.PrevailingWindDir = WindHelper.GetPrevailingWindDirection(t);
+                t.WindNoise = WindHelper.GetWindNoise(t);
+
+            }
+
+            //normalise wind noise to between -Pi < x < Pi
+            double min = Tiles.Values.Min(t => t.WindNoise);
+            double max = Tiles.Values.Max(t => t.WindNoise);
+
+            foreach (MapTile t in Tiles.Values)
+            {
+                t.WindNoise = MathHelper.Scale(min, max, -Math.PI, Math.PI, t.WindNoise);
+                t.WindDirection = WindHelper.GetWindDirection(t);
+            }
+
+            //normalise the wind direction to 0 < x < 2pi
+            min = Tiles.Values.Min(t => t.WindDirection);
+            max = Tiles.Values.Max(t => t.WindDirection);
+            foreach (MapTile t in Tiles.Values)
+            {
+                t.WindDirection = MathHelper.Scale(min, max, 0, 2d * Math.PI, t.WindDirection);
+            }
+        }
+         
 
         private void CreateRivers()
         {
@@ -670,10 +667,12 @@ namespace ReSource
             HighlightShape.FillColor = Color.Transparent;
         }
 
+        VertexArray windArrows;
         private void CreateVertexArray()
         {
             vertices = new VertexArray(PrimitiveType.Quads);
             downslopeArrows = new VertexArray(PrimitiveType.Lines);
+            windArrows = new VertexArray(PrimitiveType.Lines);
 
             foreach (MapTile tile in Tiles.Values)
             {
@@ -697,38 +696,58 @@ namespace ReSource
                 vertex.Color = tile.DisplayColour;
                 vertices.Append(vertex);
 
-                //draw the downslope
                 Vector2f tileCenter = new Vector2f(tile.GlobalIndex.X + 0.5f, tile.GlobalIndex.Y + 0.5f) * TileSize;
+                
+                //draw the downslope arrows
+                if(drawDownslopes)
+                {
+                    Vector2f normal = MathHelper.UnitNormal((Vector2f)tile.DownslopeDir);
+                    vertex = new Vertex();
+                    vertex.Position = tileCenter;
+                    vertex.Color = Color.White;
+                    downslopeArrows.Append(vertex);
 
-                vertex = new Vertex();
-                vertex.Position = tileCenter;
-                vertex.Color = Color.White;
-                downslopeArrows.Append(vertex);
+                    vertex = new Vertex();
+                    vertex.Position = tileCenter + (Vector2f)tile.DownslopeDir * TileSize / 2;
+                    vertex.Color = Color.White;
+                    downslopeArrows.Append(vertex);
 
-                vertex = new Vertex();
-                vertex.Position = tileCenter + (Vector2f)tile.DownslopeDir * TileSize / 2;
-                vertex.Color = Color.White;
-                downslopeArrows.Append(vertex);
+                    vertex = new Vertex();
+                    vertex.Position = tileCenter + (Vector2f)tile.DownslopeDir * TileSize / 2;
+                    vertex.Color = Color.White;
+                    downslopeArrows.Append(vertex);
 
-                vertex = new Vertex();
-                vertex.Position = tileCenter + (Vector2f)tile.DownslopeDir * TileSize / 2;
-                vertex.Color = Color.White;
-                downslopeArrows.Append(vertex);
+                    vertex = new Vertex();
+                    vertex.Position = tileCenter + ((Vector2f)tile.DownslopeDir + normal) / 4 * TileSize;
+                    vertex.Color = Color.White;
+                    downslopeArrows.Append(vertex);
+                }
+                
+                //draw wind arrows
+                if(drawWind)
+                {
+                    Vector2f windDir = MathHelper.RadiansToUnitVector(tile.WindDirection);
+                    Vector2f normal = MathHelper.UnitNormal(windDir);
+                    vertex = new Vertex();
+                    vertex.Position = tileCenter;
+                    vertex.Color = Color.White;
+                    windArrows.Append(vertex);
 
-                vertex = new Vertex();
-                vertex.Position = tileCenter + MathHelper.UnitNormal(tile.DownslopeDir) * TileSize / 4;
-                vertex.Color = Color.White;
-                downslopeArrows.Append(vertex);
+                    vertex = new Vertex();
+                    vertex.Position = tileCenter + windDir * TileSize / 2;
+                    vertex.Color = Color.White;
+                    windArrows.Append(vertex);
 
-                vertex = new Vertex();
-                vertex.Position = tileCenter + (Vector2f)tile.DownslopeDir * TileSize / 2;
-                vertex.Color = Color.White;
-                downslopeArrows.Append(vertex);
+                    vertex = new Vertex();
+                    vertex.Position = tileCenter + windDir * TileSize / 2;
+                    vertex.Color = Color.White;
+                    windArrows.Append(vertex);
 
-                vertex = new Vertex();
-                vertex.Position = tileCenter - MathHelper.UnitNormal(tile.DownslopeDir) * TileSize / 4;
-                vertex.Color = Color.White;
-                downslopeArrows.Append(vertex);
+                    vertex = new Vertex();
+                    vertex.Position = tileCenter + (windDir + normal) / 4 * TileSize;
+                    vertex.Color = Color.White;
+                    windArrows.Append(vertex);                
+                }
             }
         }
        
@@ -738,7 +757,8 @@ namespace ReSource
             window.Draw(vertices);
 
             if(drawDownslopes) window.Draw(downslopeArrows);
-            if (drawRandomWalks) randomWalks.ForEach(va => window.Draw(va));            
+            if (drawRandomWalks) randomWalks.ForEach(va => window.Draw(va));
+            if (drawWind) window.Draw(windArrows);
            
             if (drawHighlight)
             {
@@ -827,8 +847,9 @@ namespace ReSource
             {              
                 Console.WriteLine("Clicked tileIndex: ({0}, {1}), z = {2}, water = {3}", x, y, t.Elevation, t.Water);
                 Console.WriteLine("WorldPos: ({0},{1})", index.X, index.Y);
-                Console.WriteLine("DownslopeDir: ({0},{1}), Downhill to sea:{2}", t.DownslopeDir.X, t.DownslopeDir.Y, t.DownhillToSea);
-                Console.WriteLine("River volume: {0}. River source: {1}", t.RiverVolume, t.RiverSource);
+                Console.WriteLine("Wind dir: {0}", t.WindDirection);
+                //Console.WriteLine("DownslopeDir: ({0},{1}), Downhill to sea:{2}", t.DownslopeDir.X, t.DownslopeDir.Y, t.DownhillToSea);
+                //Console.WriteLine("River volume: {0}. River source: {1}", t.RiverVolume, t.RiverSource);
                 Console.WriteLine();
             }           
         }
@@ -838,10 +859,13 @@ namespace ReSource
             if(e.Code == Keyboard.Key.D)
             {
                 drawDownslopes = !drawDownslopes;
+                drawWind = false;
+                CreateVertexArray();
             }
             if(e.Code == Keyboard.Key.F)
             {
                 drawRandomWalks = !drawRandomWalks;
+                CreateVertexArray();
             }
             if(e.Code == Keyboard.Key.M)
             {
@@ -865,6 +889,20 @@ namespace ReSource
                 {
                     t.SetElevationColor();
                 }  
+                CreateVertexArray();
+            }
+            if (e.Code == Keyboard.Key.W)
+            {
+                foreach (MapTile t in Tiles.Values)
+                {
+                    t.SetWindColor();
+                }
+                CreateVertexArray();
+            }
+            if (e.Code == Keyboard.Key.Q)
+            {
+                drawWind = !drawWind;
+                drawDownslopes = false;
                 CreateVertexArray();
             }
         }

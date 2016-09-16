@@ -31,7 +31,12 @@ namespace ReSource
         
         static PerlinGenerator()
         {         
-            lookupTable = InitialiseLookupTable(cap);            
+            Randomise(cap);
+        }
+
+        public static void Randomise(int randomSeed = -1)
+        {
+            lookupTable = InitialiseLookupTable(cap, randomSeed);
         }
 
         public static double Perlin(double x, double y)

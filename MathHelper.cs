@@ -120,6 +120,11 @@ namespace ReSource
         public static Vector2f UnitNormal(Vector2i v)
         {
             return UnitNormal(new Vector2f(v.X, v.Y));
-        }        
+        }     
+   
+        public static Vector2f RadiansToUnitVector(double angle)
+        {
+            return Normalise(new Vector2f((float)Math.Sin(angle), (float)Math.Cos(angle)));
+        }
     }
 }

@@ -16,7 +16,7 @@ namespace ReSource
          */
         //General
         public Vector2i GlobalIndex { get; private set; }   //id in the whole world
-        private WorldMap ParentMap;
+        public WorldMap ParentMap { get; private set; }
         public List<MapTile> OrthogonalNeighbours = new List<MapTile>();
         public List<MapTile> DiagonalNeighbours = new List<MapTile>();
         private int tileSize;
@@ -32,10 +32,15 @@ namespace ReSource
         public WaterType Water { get; set; }
         public bool Coast = false;
 
+        //wind        
+        public double WindDirection { get; set; }
+        public double PrevailingWindDir { get; set; }
+        public double WindNoise { get; set; }
+
         //Biome
         public Biome Biome { get; set; }
 
-        //colors for the map view
+        //colors for the different map views
         public Color DisplayColour;
 
         /*
@@ -52,7 +57,7 @@ namespace ReSource
             this.tileSize = tileSize;
             this.GlobalIndex = globalIndex;          
             
-            Water = WaterType.Unassigned;                       
+            Water = WaterType.Unassigned;            
         }    
        
         public void SetElevationColor()
@@ -115,6 +120,11 @@ namespace ReSource
         public void SetBiomeColor()
         {
             DisplayColour = Biome.Color;
+        }
+
+        public void SetWindColor()
+        {
+            DisplayColour = WindHelper.GetWindColor(this);
         }
        
         public void Update(float dt)
