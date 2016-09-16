@@ -102,7 +102,6 @@
     <Compile Include="Game.cs" />
     <Compile Include="GameState.cs" />
     <Compile Include="MapMoveEventArgs.cs" />
-    <Compile Include="MapViewType.cs" />
     <Compile Include="RandomWalker.cs" />
     <Compile Include="WaterType.cs" />
     <Compile Include="WorldMap.cs" />

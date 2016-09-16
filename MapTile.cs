@@ -11,44 +11,40 @@ namespace ReSource
 {
     class MapTile
     {
+        /*
+         * For any map
+         */
+        //General
         public Vector2i GlobalIndex { get; private set; }   //id in the whole world
-        public int ChunkIndex { get; private set; }    //id within its own chunk (0–255)
         private WorldMap ParentMap;
-        public bool border { get; private set; }         
-
         public List<MapTile> OrthogonalNeighbours = new List<MapTile>();
         public List<MapTile> DiagonalNeighbours = new List<MapTile>();
-        
-        /*
-         * Rendering parameters
-         * 
-         *  A MapTileData object is used to pass data loaded from file to the MapTile object
-         *  and unpacked into the variables below
-         */        
-
         private int tileSize;
-        public Color ElevationColor { get; set; }
+
+        //rivers
+        public Vector2i DownslopeDir { get; set; }
+        public int RiverVolume { get; set; }
+        public bool RiverSource = false;
+        public bool DownhillToSea = false;
+
+        //water & moisture
+        public double Moisture { get; set; }
+        public WaterType Water { get; set; }
+        public bool Coast = false;
+
+        //Biome
+        public Biome Biome { get; set; }
+
+        //colors for the map view
+        public Color DisplayColour;
 
         /*
-         * Biome parameters
+         * For 'noise' maps
          */
         public double Elevation { get; set; }
         public double Perlin { get; set; }
         public double Voronoi { get; set; }
         public double Gaussian { get; set; }
-
-        public Vector2i DownslopeDir { get; set; }
-
-        public double Moisture { get;  set; }        
-        public Color MoistureColor { get; private set; }
-
-        public WaterType Water { get; set; }        
-        public int RiverVolume { get; set; }
-        public bool RiverSource = false;
-        public bool Coast = false;
-        public bool DownhillToSea = false;
-
-        public Biome Biome { get; set; }
 
         public MapTile(WorldMap parentMap, Vector2i globalIndex, int tileSize)
         {
@@ -56,18 +52,10 @@ namespace ReSource
             this.tileSize = tileSize;
             this.GlobalIndex = globalIndex;          
             
-            Water = WaterType.Unassigned;
-
-            if(globalIndex.X <= 0 
-                || globalIndex.Y <= 0 
-                || globalIndex.X >= ParentMap.MapSize.X - 1
-                || globalIndex.Y >= ParentMap.MapSize.Y - 1)
-            {
-                border = true;
-            }            
+            Water = WaterType.Unassigned;                       
         }    
        
-        public void UpdateElevationColor()
+        public void SetElevationColor()
         {
             Color color = new Color();
             color.A = 255;
@@ -107,10 +95,10 @@ namespace ReSource
                 color = Color.Cyan;
             }            
     
-            ElevationColor = color;
+            DisplayColour = color;
         }  
 
-        public void UpdateMoistureColor()
+        public void SetMoistureColor()
         {
             if (Water != WaterType.Ocean)
             {
@@ -120,8 +108,13 @@ namespace ReSource
                 c.R = (byte)(255 - interpolate);
                 c.G = (byte)(interpolate);
 
-                MoistureColor = c;
+                DisplayColour = c;
             }            
+        }
+
+        public void SetBiomeColor()
+        {
+            DisplayColour = Biome.Color;
         }
        
         public void Update(float dt)

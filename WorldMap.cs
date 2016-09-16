@@ -21,7 +21,6 @@ namespace ReSource
         private VertexArray downslopeArrows;
         private bool drawDownslopes = false;
         private bool drawRandomWalks = false;
-        private MapViewType mapViewType = MapViewType.Elevation;
 
         public static Font Font = new Font(@"..\..\..\resources\fonts\arial.ttf");
 
@@ -46,25 +45,26 @@ namespace ReSource
             ExecuteTimedFunction(CalculatePerlinCoefficients);
             ExecuteTimedFunction(CalculateGaussianCoefficients);
             ExecuteTimedFunction(CalculateVoronoiCoefficients);
-            ExecuteTimedFunction(NormaliseAndSetTileElevations);
+            ExecuteTimedFunction(SetTileElevations);
             ExecuteTimedFunction(RescaleElevation);
             ExecuteTimedFunction(AssignOcean);
             ExecuteTimedFunction(AssignCoast);
             ExecuteTimedFunction(AssignDownslopes);
-            ExecuteTimedFunction(() =>
-            {
-                List<MapTile> riverSources = GenerateRiverSources((int)Math.Sqrt(mapSize.Y) * 2);
-                foreach (MapTile t in riverSources)
-                {
-                    ExtendRiverFromSource(t);
-                }
-            }, "Create Rivers");
+            ExecuteTimedFunction(CreateRivers);            
             ExecuteTimedFunction(AssignMoisture);
             ExecuteTimedFunction(AssignBiomes);
             ExecuteTimedFunction(InitialiseDisplay);
             ExecuteTimedFunction(CreateVertexArray);            
             
             Console.WriteLine("Build finished in {0} s", TotalBuildTime/1000d);
+        }
+
+        private bool IsMapBorder(MapTile t)
+        {
+            return (t.GlobalIndex.X == 0)
+                || (t.GlobalIndex.Y == 0)
+                || (t.GlobalIndex.X == MapSize.X - 1)
+                || (t.GlobalIndex.Y == MapSize.Y - 1);
         }
 
         private long TotalBuildTime = 0;              
@@ -94,11 +94,159 @@ namespace ReSource
             }
         }
 
+        private void AssignTileNeighbours()
+        {
+            Parallel.ForEach(Tiles.Values, t =>
+            {
+                foreach (Vector2i dir in MathHelper.CardinalDirections)
+                {
+                    MapTile neighbour = GetTileByIndex(t.GlobalIndex + dir);
+                    if (neighbour != null)
+                    {
+                        t.OrthogonalNeighbours.Add(neighbour);
+                    }
+                }
+
+                foreach (Vector2i dir in MathHelper.OrdinalDirections)
+                {
+                    MapTile neighbour = GetTileByIndex(t.GlobalIndex + dir);
+                    if (neighbour != null)
+                    {
+                        t.DiagonalNeighbours.Add(neighbour);
+                    }
+                }
+            });
+        }
+
+        List<VertexArray> randomWalks = new List<VertexArray>();
+        private void GenerateRandomWalks(bool sides, bool topBot, int edgeWalks, int midWalks, int steps)
+        {
+            //generate a list of random walks that will be used to generate voronoi diagrams
+
+            //add a line to the left and right sides if requested
+            if (sides)
+            {
+                VertexArray left = new VertexArray(PrimitiveType.LinesStrip);
+                VertexArray right = new VertexArray(PrimitiveType.LinesStrip);
+
+                //go up in step size of 5% of the map edge
+                //this gets the same effect but makes it much much faster!
+                for (int i = 0; i < MapSize.Y; i += MapSize.Y / 20)
+                {
+                    Vertex l = new Vertex(new Vector2f(0, i) * TileSize);
+                    Vertex r = new Vertex(new Vector2f(MapSize.X, i) * TileSize);
+
+                    left.Append(l);
+                    right.Append(r);
+                }
+                randomWalks.Add(left);
+                randomWalks.Add(right);
+            }
+
+            //add a line to the top and bottom sides if requested
+            if (topBot)
+            {
+                VertexArray top = new VertexArray(PrimitiveType.LinesStrip);
+                VertexArray bot = new VertexArray(PrimitiveType.LinesStrip);
+                for (int i = 0; i < MapSize.X; i += MapSize.X / 20)
+                {
+                    Vertex t = new Vertex(new Vector2f(i, 0) * TileSize);
+                    Vertex b = new Vertex(new Vector2f(i, MapSize.Y) * TileSize);
+
+                    top.Append(t);
+                    bot.Append(b);
+                }
+                randomWalks.Add(top);
+                randomWalks.Add(bot);
+            }
+
+            //generate some random walks and add them to a list
+            List<Vector2i> startPositions = new List<Vector2i>();
+
+            //walks start in middle 80% of map
+            for (int i = 0; i < midWalks; i++)
+            {
+                int x = MathHelper.rnd.Next((int)Math.Round(0.8d * MapSize.X)) + (int)Math.Round(0.1d * MapSize.X);
+                int y = MathHelper.rnd.Next((int)Math.Round(0.8d * MapSize.Y)) + (int)Math.Round(0.1d * MapSize.Y);
+                startPositions.Add(new Vector2i(x, y));
+            }
+
+            //walks start from edge
+            for (int i = 0; i < edgeWalks; i++)
+            {
+                int rnd = MathHelper.rnd.Next(4);
+                if (rnd == 0)
+                {
+                    //start on the top row
+                    startPositions.Add(new Vector2i(MathHelper.rnd.Next(MapSize.X), 0));
+                }
+                else if (rnd == 1)
+                {
+                    //start on right column
+                    startPositions.Add(new Vector2i(MapSize.X, MathHelper.rnd.Next(MapSize.Y)));
+                }
+                else if (rnd == 2)
+                {
+                    //start on bottom row
+                    startPositions.Add(new Vector2i(MathHelper.rnd.Next(MapSize.X), MapSize.Y));
+                }
+                else if (rnd == 3)
+                {
+                    //start on left column
+                    startPositions.Add(new Vector2i(0, MathHelper.rnd.Next(MapSize.Y)));
+                }
+            }
+
+            foreach (Vector2i startPos in startPositions)
+            {
+                IntRect bounds = new IntRect(0, 0, MapSize.X * TileSize, MapSize.Y * TileSize);
+
+                //randomWalks.Add(RandomWalker.GridWalk(startPos * TileSize, bounds, TileSize, steps));
+                Vector2f start = new Vector2f(startPos.X, startPos.Y) * TileSize;
+                randomWalks.Add(RandomWalker.RandomWalk(start, bounds, MapSize.Y, 10));
+            }
+        }        
+
         private void CalculatePerlinCoefficients()
         {
             foreach(MapTile t in Tiles.Values)
             {
                 SetTilePerlin(t);
+            }
+            NormalisePerlinCoefficients();
+        }
+
+        private void SetTilePerlin(MapTile tile)
+        {
+            //get Perlin noise to get base elevation value            
+            int featureScale = MapSize.Y / 8;
+            tile.Perlin = PerlinGenerator.OctavePerlin(
+                    (double)tile.GlobalIndex.X / featureScale,
+                    (double)tile.GlobalIndex.Y / featureScale,
+                    4, 0.5);
+        }
+
+        private void NormalisePerlinCoefficients()
+        {
+            //get highest and lowest elevations and normalise to world min and max
+            double min = Double.MaxValue;
+            double max = Double.MinValue;
+            foreach (MapTile tile in Tiles.Values)
+            {
+                if (tile.Perlin < min)
+                {
+                    min = tile.Perlin;
+                }
+
+                if (tile.Perlin > max)
+                {
+                    max = tile.Perlin;
+                }
+            }
+
+            foreach (MapTile t in Tiles.Values)
+            {
+                t.Perlin = MathHelper.Scale(min, max, 0, 1, t.Perlin);
             }
         }
 
@@ -108,6 +256,15 @@ namespace ReSource
             {
                 SetTileGaussian(t);
             }
+        }
+
+        private void SetTileGaussian(MapTile tile)
+        {
+            //generate a Gaussian distribution in the X direction to make oceans at the sides
+            double scaleX = MathHelper.Scale(0, MapSize.X, -1.5, 1.5, tile.GlobalIndex.X);
+            double elevationDiff = MaxElevation - MinElevation;
+            double gaussianWidth = 1;
+            tile.Gaussian = elevationDiff * Math.Exp(-Math.Pow(scaleX, 2d) / gaussianWidth) - (((double)elevationDiff - MaxElevation) / (double)elevationDiff);
         }
 
         private void CalculateVoronoiCoefficients()
@@ -132,147 +289,87 @@ namespace ReSource
             });
             Console.SetCursorPosition(System.Reflection.MethodBase.GetCurrentMethod().Name.Length, Console.CursorTop);
             timer.Dispose();
+
+            NormaliseVoronoiCoefficients();
         }
 
-        private void AssignTileNeighbours()
-        {            
-            Parallel.ForEach(Tiles.Values, t =>
+        private void SetTileVoronoi(MapTile tile)
+        {
+            //find distance to nearest random walk line         
+
+            Vector2f worldPos = TileSize * (Vector2f)tile.GlobalIndex;
+            double min = Double.MaxValue;
+            foreach (VertexArray va in randomWalks)
             {
-                foreach (Vector2i dir in MathHelper.CardinalDirections)
+                for (uint i = 0; i < va.VertexCount; i++)
                 {
-                    MapTile neighbour = GetTileByIndex(t.GlobalIndex + dir);
-                    if (neighbour != null)
+                    double sqDist = Math.Pow(worldPos.X - va[i].Position.X, 2) + Math.Pow(worldPos.Y - va[i].Position.Y, 2);
+                    if (sqDist < min)
                     {
-                        t.OrthogonalNeighbours.Add(neighbour);
+                        min = sqDist;
                     }
                 }
-
-                foreach (Vector2i dir in MathHelper.OrdinalDirections)
-                {
-                    MapTile neighbour = GetTileByIndex(t.GlobalIndex + dir);
-                    if (neighbour != null)
-                    {
-                        t.DiagonalNeighbours.Add(neighbour);
-                    }
-                }                          
-            });         
+            }
+            tile.Voronoi = min;
         }
-        
-        private void NormaliseAndSetTileElevations()
+
+        private void NormaliseVoronoiCoefficients()
         {
-            //normalise the coefficients on each tile
-            NormalisePerlinCoefficients();
-            NormaliseVoronoiCoefficients();
+            //get highest and lowest elevations and normalise to world min and max
+            double min = Double.MaxValue;
+            double max = Double.MinValue;
+            foreach (MapTile tile in Tiles.Values)
+            {
+                if (tile.Voronoi < min)
+                {
+                    min = tile.Voronoi;
+                }
 
+                if (tile.Voronoi > max)
+                {
+                    max = tile.Voronoi;
+                }
+            }
 
+            foreach (MapTile t in Tiles.Values)
+            {
+                t.Voronoi = MathHelper.Scale(min, max, 0.1, 1.5, t.Voronoi);
+            }
+        }
+
+        private void SetTileElevations()
+        {
             //multiply the weighting factors to get the final elevations
             foreach (MapTile tile in Tiles.Values)
             {
                 //tile.Elevation = tile.Perlin * tile.Gaussian * tile.Voronoi;  
                 tile.Elevation = tile.Perlin * tile.Voronoi;
             }
-        }
-        
-        /*
-        private void NormaliseAndSetTileElevations()     
-        {
-            foreach(MapTile t in Tiles.Values)
-            {
-                t.Elevation = t.Gaussian * Math.Sin(4 *  t.GlobalIndex.X * Math.PI / 180) + Math.Cos(4 * t.GlobalIndex.Y * Math.PI / 180);
-            }
-        }
-        */
-        private void InitialiseDisplay()
-        {
+        } 
 
+        private void RescaleElevation()
+        {
+            //get highest and lowest elevations and normalise to world min and max
+            double min = Double.MaxValue;
+            double max = Double.MinValue;
             foreach (MapTile tile in Tiles.Values)
             {
-                tile.UpdateElevationColor();
-                tile.UpdateMoistureColor();
+                if (tile.Elevation < min)
+                {
+                    min = tile.Elevation;
+                }
+
+                if (tile.Elevation > max)
+                {
+                    max = tile.Elevation;
+                }
             }
-            //activate tiles in the middle of the view            
-            ActivateTilesAround((int)Math.Floor(MapSize.X / 2d), (int)Math.Floor(MapSize.Y / 2d), 1);
 
-            HighlightShape = new RectangleShape(new Vector2f(TileSize, TileSize));
-            HighlightShape.OutlineColor = Color.White;
-            HighlightShape.OutlineThickness = -2;
-            HighlightShape.FillColor = Color.Transparent;
-        }
-
-        private void CreateVertexArray()
-        {
-            vertices = new VertexArray(PrimitiveType.Quads);
-            downslopeArrows = new VertexArray(PrimitiveType.Lines);
-           
-            foreach(MapTile tile in Tiles.Values)
+            foreach (MapTile t in Tiles.Values)
             {
-                Color c;
-                if(mapViewType == MapViewType.Elevation)
-                {
-                    c = tile.ElevationColor;
-                }
-                else if(mapViewType == MapViewType.Moisture)
-                {
-                    c = tile.MoistureColor;
-                } else
-                {
-                    c = tile.Biome.Color;
-                }
-
-                Vertex vertex = new Vertex();
-                vertex.Position = new Vector2f(tile.GlobalIndex.X, tile.GlobalIndex.Y) * TileSize;                
-                vertex.Color = c;                
-                vertices.Append(vertex);
-
-                vertex = new Vertex();
-                vertex.Position = new Vector2f(tile.GlobalIndex.X + 1, tile.GlobalIndex.Y) * TileSize;
-                vertex.Color = c;
-                vertices.Append(vertex);
-
-                vertex = new Vertex();
-                vertex.Position = new Vector2f(tile.GlobalIndex.X + 1, tile.GlobalIndex.Y + 1) * TileSize;
-                vertex.Color = c;
-                vertices.Append(vertex);
-                
-                vertex = new Vertex();
-                vertex.Position = new Vector2f(tile.GlobalIndex.X, tile.GlobalIndex.Y + 1) * TileSize;
-                vertex.Color = c;
-                vertices.Append(vertex);
-
-                //draw the downslope
-                Vector2f tileCenter = new Vector2f(tile.GlobalIndex.X + 0.5f, tile.GlobalIndex.Y + 0.5f) * TileSize;
-                
-                vertex = new Vertex();
-                vertex.Position = tileCenter;
-                vertex.Color = Color.White;
-                downslopeArrows.Append(vertex);
-
-                vertex = new Vertex();
-                vertex.Position = tileCenter + (Vector2f)tile.DownslopeDir * TileSize / 2;
-                vertex.Color = Color.White;
-                downslopeArrows.Append(vertex);
-
-                vertex = new Vertex();
-                vertex.Position = tileCenter + (Vector2f)tile.DownslopeDir * TileSize / 2;
-                vertex.Color = Color.White;
-                downslopeArrows.Append(vertex);
-
-                vertex = new Vertex();
-                vertex.Position = tileCenter + MathHelper.UnitNormal(tile.DownslopeDir) * TileSize /4;
-                vertex.Color = Color.White;
-                downslopeArrows.Append(vertex);
-
-                vertex = new Vertex();
-                vertex.Position = tileCenter + (Vector2f)tile.DownslopeDir * TileSize / 2;
-                vertex.Color = Color.White;
-                downslopeArrows.Append(vertex);
-
-                vertex = new Vertex();
-                vertex.Position = tileCenter - MathHelper.UnitNormal(tile.DownslopeDir) * TileSize / 4;
-                vertex.Color = Color.White;
-                downslopeArrows.Append(vertex);
-            }            
-        }
+                t.Elevation = MathHelper.Scale(min, max, MinElevation, MaxElevation, t.Elevation);
+            }
+        }         
 
         private void AssignOcean()
         {
@@ -284,7 +381,7 @@ namespace ReSource
                 for(int y = 0; y < MapSize.Y; y++)
                 {
                     MapTile tile = GetTileByIndex(x, y);
-                    if (tile.border && tile.Elevation < SeaLevel)
+                    if (IsMapBorder(tile) && tile.Elevation < SeaLevel)
                     {
                         tile.Water = WaterType.Ocean;
                         fillQ.Enqueue(tile);
@@ -359,208 +456,8 @@ namespace ReSource
                     tile.Coast = (tile.Water == WaterType.Land) && (oceanNeighbour > 0) && (landNeighbour > 0);
                 }
             }
-        }       
-
-        List<VertexArray> randomWalks = new List<VertexArray>();
-        private void GenerateRandomWalks(bool sides, bool topBot, int edgeWalks, int midWalks, int steps)
-        {
-            //generate a list of random walks that will be used to generate voronoi diagrams
-            
-            //add a line to the left and right sides if requested
-            if(sides)
-            {
-                VertexArray left = new VertexArray(PrimitiveType.LinesStrip);
-                VertexArray right = new VertexArray(PrimitiveType.LinesStrip);
-
-                //go up in step size of 5% of the map edge
-                //this gets the same effect but makes it much much faster!
-                for (int i = 0; i < MapSize.Y; i += MapSize.Y / 20)
-                {
-                    Vertex l = new Vertex(new Vector2f(0, i) * TileSize);
-                    Vertex r = new Vertex(new Vector2f(MapSize.X, i) * TileSize);
-
-                    left.Append(l);
-                    right.Append(r);
-                }
-                randomWalks.Add(left);
-                randomWalks.Add(right);
-            }
-
-            //add a line to the top and bottom sides if requested
-            if(topBot)
-            {
-                VertexArray top = new VertexArray(PrimitiveType.LinesStrip);
-                VertexArray bot = new VertexArray(PrimitiveType.LinesStrip);
-                for (int i = 0; i < MapSize.X; i += MapSize.X / 20)
-                {
-                    Vertex t = new Vertex(new Vector2f(i, 0) * TileSize);
-                    Vertex b = new Vertex(new Vector2f(i, MapSize.Y) * TileSize);
-
-                    top.Append(t);
-                    bot.Append(b);
-                }
-                randomWalks.Add(top);
-                randomWalks.Add(bot);
-            }           
-            
-            //generate some random walks and add them to a list
-            List<Vector2i> startPositions = new List<Vector2i>();
-
-            //walks start in middle 80% of map
-            for (int i = 0; i < midWalks; i++)
-            {
-                int x = MathHelper.rnd.Next((int)Math.Round(0.8d * MapSize.X)) + (int)Math.Round(0.1d * MapSize.X);
-                int y = MathHelper.rnd.Next((int)Math.Round(0.8d * MapSize.Y)) + (int)Math.Round(0.1d * MapSize.Y);
-                startPositions.Add(new Vector2i(x, y));
-            }
-
-            //walks start from edge
-            for (int i = 0; i < edgeWalks; i++)
-            {
-                int rnd = MathHelper.rnd.Next(4);
-                if (rnd == 0)
-                {
-                    //start on the top row
-                    startPositions.Add(new Vector2i(MathHelper.rnd.Next(MapSize.X), 0));
-                }
-                else if (rnd == 1)
-                {
-                    //start on right column
-                    startPositions.Add(new Vector2i(MapSize.X, MathHelper.rnd.Next(MapSize.Y)));
-                }
-                else if (rnd == 2)
-                {
-                    //start on bottom row
-                    startPositions.Add(new Vector2i(MathHelper.rnd.Next(MapSize.X), MapSize.Y));
-                }
-                else if (rnd == 3)
-                {
-                    //start on left column
-                    startPositions.Add(new Vector2i(0, MathHelper.rnd.Next(MapSize.Y)));
-                }
-            }
-            
-            foreach (Vector2i startPos in startPositions)
-            {
-                IntRect bounds = new IntRect(0, 0, MapSize.X * TileSize, MapSize.Y * TileSize);
-
-                //randomWalks.Add(RandomWalker.GridWalk(startPos * TileSize, bounds, TileSize, steps));
-                Vector2f start = new Vector2f(startPos.X, startPos.Y) * TileSize;
-                randomWalks.Add(RandomWalker.RandomWalk(start, bounds, MapSize.Y, 10));
-            }
-        }
-
-        private void SetTilePerlin(MapTile tile)
-        {
-            //get Perlin noise to get base elevation value            
-            int featureScale = MapSize.Y / 8;
-            tile.Perlin = PerlinGenerator.OctavePerlin(
-                    (double)tile.GlobalIndex.X / featureScale,
-                    (double)tile.GlobalIndex.Y / featureScale,
-                    4, 0.5);
-        }
-
-        private void NormalisePerlinCoefficients()
-        {
-            //get highest and lowest elevations and normalise to world min and max
-            double min = Double.MaxValue;
-            double max = Double.MinValue;
-            foreach (MapTile tile in Tiles.Values)
-            {
-                if (tile.Perlin < min)
-                {
-                    min = tile.Perlin;
-                }
-
-                if (tile.Perlin > max)
-                {
-                    max = tile.Perlin;
-                }
-            }
-
-            foreach (MapTile t in Tiles.Values)
-            {
-                t.Perlin = MathHelper.Scale(min, max, 0, 1, t.Perlin);
-            }
-        }
-
-        private void SetTileGaussian(MapTile tile)
-        {
-            //generate a Gaussian distribution in the X direction to make oceans at the sides
-            double scaleX = MathHelper.Scale(0, MapSize.X, -1.5, 1.5, tile.GlobalIndex.X);
-            double elevationDiff = MaxElevation - MinElevation;
-            double gaussianWidth = 1;
-            tile.Gaussian = elevationDiff * Math.Exp(-Math.Pow(scaleX, 2d) / gaussianWidth) - (((double)elevationDiff - MaxElevation) / (double)elevationDiff);
-        } 
-
-        private void SetTileVoronoi(MapTile tile)
-        {
-            //find distance to nearest random walk line         
-
-            Vector2f worldPos = TileSize * (Vector2f)tile.GlobalIndex;
-            double min = Double.MaxValue;
-            foreach (VertexArray va in randomWalks)
-            {                   
-                for(uint i = 0; i < va.VertexCount; i++)
-                {
-                    double sqDist = Math.Pow(worldPos.X - va[i].Position.X, 2) + Math.Pow(worldPos.Y - va[i].Position.Y, 2);
-                    if (sqDist < min)
-                    {
-                        min = sqDist;
-                    }
-                }                    
-            }
-            tile.Voronoi = min;  
-        }
-
-        private void NormaliseVoronoiCoefficients()
-        {
-            //get highest and lowest elevations and normalise to world min and max
-            double min = Double.MaxValue;
-            double max = Double.MinValue;
-            foreach (MapTile tile in Tiles.Values)
-            {
-                if (tile.Voronoi < min)
-                {
-                    min = tile.Voronoi;
-                }
-
-                if (tile.Voronoi > max)
-                {
-                    max = tile.Voronoi;
-                }
-            }
-
-            foreach (MapTile t in Tiles.Values)
-            {                
-                t.Voronoi = MathHelper.Scale(min, max, 0.1, 1.5, t.Voronoi);                
-            }
-        }
-
-        private void RescaleElevation()
-        {
-            //get highest and lowest elevations and normalise to world min and max
-            double min = Double.MaxValue;
-            double max = Double.MinValue;
-            foreach (MapTile tile in Tiles.Values)
-            {                
-                if (tile.Elevation < min)
-                {
-                    min = tile.Elevation;
-                }
-               
-                if (tile.Elevation > max)
-                {
-                    max = tile.Elevation;
-                }
-            }
-
-            foreach (MapTile t in Tiles.Values)
-            {
-                t.Elevation = MathHelper.Scale(min, max, MinElevation, MaxElevation, t.Elevation);                  
-            }
-        }      
-       
+        }    
+     
         private void AssignDownslopes()
         {
             Parallel.ForEach(Tiles.Values, tile => AssignTileDownslope(tile));
@@ -602,6 +499,15 @@ namespace ReSource
                     tile.DownhillToSea = true;                    
                     return;
                 }
+            }
+        }
+
+        private void CreateRivers()
+        {
+            List<MapTile> riverSources = GenerateRiverSources((int)Math.Sqrt(MapSize.Y) * 2);
+            foreach (MapTile t in riverSources)
+            {
+                ExtendRiverFromSource(t);
             }
         }
 
@@ -746,7 +652,85 @@ namespace ReSource
             }
 
             t.Biome.Count++;
-        }        
+        }
+
+        private void InitialiseDisplay()
+        {
+            foreach (MapTile t in Tiles.Values)
+            {
+                t.SetElevationColor();
+            }
+
+            //activate tiles in the middle of the view            
+            ActivateTilesAround((int)Math.Floor(MapSize.X / 2d), (int)Math.Floor(MapSize.Y / 2d), 1);
+
+            HighlightShape = new RectangleShape(new Vector2f(TileSize, TileSize));
+            HighlightShape.OutlineColor = Color.White;
+            HighlightShape.OutlineThickness = -2;
+            HighlightShape.FillColor = Color.Transparent;
+        }
+
+        private void CreateVertexArray()
+        {
+            vertices = new VertexArray(PrimitiveType.Quads);
+            downslopeArrows = new VertexArray(PrimitiveType.Lines);
+
+            foreach (MapTile tile in Tiles.Values)
+            {
+                Vertex vertex = new Vertex();
+                vertex.Position = new Vector2f(tile.GlobalIndex.X, tile.GlobalIndex.Y) * TileSize;
+                vertex.Color = tile.DisplayColour;
+                vertices.Append(vertex);
+
+                vertex = new Vertex();
+                vertex.Position = new Vector2f(tile.GlobalIndex.X + 1, tile.GlobalIndex.Y) * TileSize;
+                vertex.Color = tile.DisplayColour;
+                vertices.Append(vertex);
+
+                vertex = new Vertex();
+                vertex.Position = new Vector2f(tile.GlobalIndex.X + 1, tile.GlobalIndex.Y + 1) * TileSize;
+                vertex.Color = tile.DisplayColour;
+                vertices.Append(vertex);
+
+                vertex = new Vertex();
+                vertex.Position = new Vector2f(tile.GlobalIndex.X, tile.GlobalIndex.Y + 1) * TileSize;
+                vertex.Color = tile.DisplayColour;
+                vertices.Append(vertex);
+
+                //draw the downslope
+                Vector2f tileCenter = new Vector2f(tile.GlobalIndex.X + 0.5f, tile.GlobalIndex.Y + 0.5f) * TileSize;
+
+                vertex = new Vertex();
+                vertex.Position = tileCenter;
+                vertex.Color = Color.White;
+                downslopeArrows.Append(vertex);
+
+                vertex = new Vertex();
+                vertex.Position = tileCenter + (Vector2f)tile.DownslopeDir * TileSize / 2;
+                vertex.Color = Color.White;
+                downslopeArrows.Append(vertex);
+
+                vertex = new Vertex();
+                vertex.Position = tileCenter + (Vector2f)tile.DownslopeDir * TileSize / 2;
+                vertex.Color = Color.White;
+                downslopeArrows.Append(vertex);
+
+                vertex = new Vertex();
+                vertex.Position = tileCenter + MathHelper.UnitNormal(tile.DownslopeDir) * TileSize / 4;
+                vertex.Color = Color.White;
+                downslopeArrows.Append(vertex);
+
+                vertex = new Vertex();
+                vertex.Position = tileCenter + (Vector2f)tile.DownslopeDir * TileSize / 2;
+                vertex.Color = Color.White;
+                downslopeArrows.Append(vertex);
+
+                vertex = new Vertex();
+                vertex.Position = tileCenter - MathHelper.UnitNormal(tile.DownslopeDir) * TileSize / 4;
+                vertex.Color = Color.White;
+                downslopeArrows.Append(vertex);
+            }
+        }
        
         public void Draw(RenderWindow window)
         {
@@ -861,17 +845,26 @@ namespace ReSource
             }
             if(e.Code == Keyboard.Key.M)
             {
-                mapViewType = MapViewType.Moisture;
+                foreach (MapTile t in Tiles.Values)
+                {
+                    t.SetMoistureColor();
+                }
                 CreateVertexArray();
             }
             if(e.Code == Keyboard.Key.B)
             {
-                mapViewType = MapViewType.Biome;
+                foreach (MapTile t in Tiles.Values)
+                {
+                    t.SetBiomeColor();
+                }
                 CreateVertexArray();
             }
             if (e.Code == Keyboard.Key.E)
             {
-                mapViewType = MapViewType.Elevation;
+                foreach (MapTile t in Tiles.Values)
+                {
+                    t.SetElevationColor();
+                }  
                 CreateVertexArray();
             }
         }
