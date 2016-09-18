@@ -20,6 +20,14 @@ namespace ReSource
         public List<MapTile> OrthogonalNeighbours = new List<MapTile>();
         public List<MapTile> DiagonalNeighbours = new List<MapTile>();
         private int tileSize;
+        public int LandmassId = -1;
+
+        //Elevation
+        public double Elevation { get; set; }
+        //elevation noise coefficients
+        public double Perlin { get; set; }
+        public double Voronoi { get; set; }
+        public double Gaussian { get; set; }
 
         //rivers
         public Vector2i DownslopeDir { get; set; }
@@ -36,20 +44,13 @@ namespace ReSource
         public double WindDirection { get; set; }
         public double PrevailingWindDir { get; set; }
         public double WindNoise { get; set; }
+        public double WindStrength { get; set; }
 
         //Biome
         public Biome Biome { get; set; }
 
         //colors for the different map views
         public Color DisplayColour;
-
-        /*
-         * For 'noise' maps
-         */
-        public double Elevation { get; set; }
-        public double Perlin { get; set; }
-        public double Voronoi { get; set; }
-        public double Gaussian { get; set; }
 
         public MapTile(WorldMap parentMap, Vector2i globalIndex, int tileSize)
         {
@@ -124,9 +125,29 @@ namespace ReSource
 
         public void SetWindColor()
         {
+            //Yellow    - south
+            //Red       - west            
+            //Green     - north
+            //Blue      - east
             DisplayColour = WindHelper.GetWindColor(this);
+            
+            //brighter colors = higher wind strength
+
+            DisplayColour.A = (byte)(255 * WindStrength);
+            
+        }            
+         
+        public void SetLandmassColor()
+        {
+            if (LandmassId == -1)
+            {
+                DisplayColour = Color.Black;
+            }
+            else
+            {
+                DisplayColour = ColorLookup.Color[LandmassId % ColorLookup.Color.Count];
+            }
         }
-       
         public void Update(float dt)
         {
 

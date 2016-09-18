@@ -15,6 +15,7 @@ namespace ReSource
     {   
         private Dictionary<Vector2i, MapTile> Tiles = new Dictionary<Vector2i, MapTile>();
         private List<Vector2i> ActiveTileIndices = new List<Vector2i>();
+        private List<Landmass> LandMasses = new List<Landmass>();
 
         private RectangleShape HighlightShape;
         private VertexArray vertices;
@@ -49,12 +50,14 @@ namespace ReSource
             ExecuteTimedFunction(SetTileElevations);
             ExecuteTimedFunction(RescaleElevation);
             ExecuteTimedFunction(AssignOcean);
+            ExecuteTimedFunction(AssignLandMasses);
             ExecuteTimedFunction(AssignCoast);
             ExecuteTimedFunction(AssignDownslopes);
-            ExecuteTimedFunction(GenerateWind);
+            ExecuteTimedFunction(GenerateWindDirection);
+            ExecuteTimedFunction(CalculateWindSpeed);
             ExecuteTimedFunction(CreateRivers);            
-            ExecuteTimedFunction(AssignMoisture);
-            ExecuteTimedFunction(AssignBiomes);
+            //ExecuteTimedFunction(AssignMoisture);
+            //ExecuteTimedFunction(AssignBiomes);
             ExecuteTimedFunction(InitialiseDisplay);
             ExecuteTimedFunction(CreateVertexArray);            
             
@@ -339,82 +342,114 @@ namespace ReSource
         }         
 
         private void AssignOcean()
-        {
+        {            
             Queue<MapTile> fillQ = new Queue<MapTile>();
 
             //go around the edge of the map and make edge chunks assign water at the edge of the map
-            for(int x = 0; x < MapSize.X; x++)
+            foreach(MapTile tile in Tiles.Values)
             {
-                for(int y = 0; y < MapSize.Y; y++)
+                if (IsMapBorder(tile) && tile.Elevation < SeaLevel)
                 {
-                    MapTile tile = GetTileByIndex(x, y);
-                    if (IsMapBorder(tile) && tile.Elevation < SeaLevel)
-                    {
-                        tile.Water = WaterType.Ocean;
-                        fillQ.Enqueue(tile);
-                    }
+                    tile.Water = WaterType.Ocean;
+                    fillQ.Enqueue(tile);
                 }
             }
-
-            //assign any tiles with elevation < 0 touching ocean as oceans
+           
+            //assign any tiles with elevation < 0 touching ocean as oceans            
             while(fillQ.Count > 0)
             {
                 MapTile tile = fillQ.Dequeue();
-                
-                foreach(MapTile neighbour in tile.OrthogonalNeighbours)
+
+                foreach (MapTile neighbour in tile.OrthogonalNeighbours)
                 {
-                    if(neighbour != null)
+                    if (neighbour.Elevation < SeaLevel && neighbour.Water == WaterType.Unassigned)
                     {
-                        if (neighbour.Elevation < SeaLevel && neighbour.Water == WaterType.Unassigned)
-                        {
-                            neighbour.Water = WaterType.Ocean;
-                            fillQ.Enqueue(neighbour);
-                        }
-                    }                    
+                        neighbour.Water = WaterType.Ocean;
+                        fillQ.Enqueue(neighbour);
+                    }
                 }                
             }
+        }     
 
-            //loop over the map again and assign the remaining tiles as either land or fresh water
-            for (int x = 0; x < MapSize.X; x++)
+        private Landmass CreateLandmass(MapTile firstTile, int landmassId)
+        {
+            Queue<MapTile> fillQ = new Queue<MapTile>();
+            Landmass lm = new Landmass(landmassId);
+
+            lm.AddTile(firstTile);
+            firstTile.LandmassId = landmassId;
+            
+            fillQ.Enqueue(firstTile);
+
+            while (fillQ.Count > 0)
             {
-                for (int y = 0; y < MapSize.Y; y++)
+                MapTile tile = fillQ.Dequeue();
+                if(tile.Water == WaterType.Unassigned)
                 {
-                    MapTile tile = GetTileByIndex(x, y);
-                    if(tile.Water == WaterType.Unassigned)
+                    //need to check this both here and in the neighbours loop
+                    //otherwise it bugs out (I think for very small islands where the queue empties too quickly)                    
+                    if (tile.Elevation > SeaLevel)
                     {
-                        if(tile.Elevation > SeaLevel)
+                        tile.Water = WaterType.Land;
+                    }
+                    else
+                    {
+                        tile.Water = WaterType.Lake;
+                    }
+                }
+                foreach (MapTile n in tile.OrthogonalNeighbours)
+                {
+                      if (n.Water == WaterType.Unassigned)
+                      {                        
+                        lm.AddTile(n);
+                        n.LandmassId = landmassId;
+
+                        if (n.Elevation > SeaLevel)
                         {
-                            tile.Water = WaterType.Land;
+                            n.Water = WaterType.Land;
                         }
                         else
                         {
-                            tile.Water = WaterType.Lake;
+                            n.Water = WaterType.Lake;
                         }
-                        
-                    }                    
-                }
-            }           
-        }     
+                        fillQ.Enqueue(n);
+                    }
+                }             
+            }
+
+            return lm;
+        }
+
+        private void AssignLandMasses()
+        {
+            //loop over the tiles and assign Water == WaterType.Unassigned to land masses
+            //using a flood fill
+            int landmassCount = 0;
+            List<MapTile> unassignedTiles = Tiles.Values.Where(t => t.Water == WaterType.Unassigned).ToList();
+            
+            while (unassignedTiles.Count() > 0){
+                LandMasses.Add(CreateLandmass(unassignedTiles.First(), landmassCount++));
+                unassignedTiles = Tiles.Values.Where(t => t.Water == WaterType.Unassigned).ToList();
+            }          
+        }
 
         private void AssignCoast()
         {
-            //if tile has at least one ocean neighbour and one land neighbour it must be coast
-            for (int x = 0; x < MapSize.X; x++)
+            foreach(Landmass lm in LandMasses)
             {
-                for (int y = 0; y < MapSize.Y; y++)
+                foreach(MapTile tile in lm.Tiles)
                 {
-                    MapTile tile = GetTileByIndex(x, y);
                     int oceanNeighbour = 0;
                     int landNeighbour = 0;
 
-                    foreach(MapTile n in tile.OrthogonalNeighbours)
+                    foreach (MapTile n in tile.OrthogonalNeighbours)
                     {
-                        if(n.Water == WaterType.Land)
+                        if (n.Water == WaterType.Land)
                         {
                             landNeighbour++;
                         }
 
-                        if(n.Water ==WaterType.Ocean)
+                        if (n.Water == WaterType.Ocean)
                         {
                             oceanNeighbour++;
                         }
@@ -469,14 +504,21 @@ namespace ReSource
             }
         }
 
-        private void GenerateWind()
+        private void GenerateWindDirection()
         {
+            //refresh the perlin generator to get new noise values
+            PerlinGenerator.Randomise();
+
             //assign each tile a wind direction
             foreach (MapTile t in Tiles.Values)
             {
                 t.PrevailingWindDir = WindHelper.GetPrevailingWindDirection(t);
-                t.WindNoise = WindHelper.GetWindNoise(t);
-
+                
+                int featureScale = t.ParentMap.MapSize.Y / 8;
+                t.WindNoise = PerlinGenerator.OctavePerlin(
+                    (double)t.GlobalIndex.X / featureScale,
+                    (double)t.GlobalIndex.Y / featureScale,
+                    5, 0.5);
             }
 
             //normalise wind noise to between -Pi < x < Pi
@@ -495,6 +537,33 @@ namespace ReSource
             foreach (MapTile t in Tiles.Values)
             {
                 t.WindDirection = MathHelper.Scale(min, max, 0, 2d * Math.PI, t.WindDirection);
+            }
+        }
+
+        private void CalculateWindSpeed()
+        {
+            //we need to generate a new noise map for the wind speed
+            //so randomise the perlin generator again
+            PerlinGenerator.Randomise();
+            foreach(MapTile t in Tiles.Values)
+            {
+                //reuse wind noise for direction                
+                int featureScale = t.ParentMap.MapSize.Y / 8;
+                t.WindNoise = PerlinGenerator.OctavePerlin(
+                    (double)t.GlobalIndex.X / featureScale,
+                    (double)t.GlobalIndex.Y / featureScale,
+                    5, 0.5);
+
+                //base level wind strength map mixture of noise and latitude
+                t.WindStrength = t.WindNoise + WindHelper.GetBaseWindStrength(t);
+            }
+
+            //normalise base wind strength map between 0 and 1
+            double min = Tiles.Values.Min(t => t.WindStrength);
+            double max = Tiles.Values.Max(t => t.WindStrength);
+            foreach(MapTile t in Tiles.Values)
+            {
+                t.WindStrength = MathHelper.Scale(min, max, 0, 1, t.WindStrength);
             }
         }
          
@@ -846,8 +915,8 @@ namespace ReSource
             if(t != null && e.Button == Mouse.Button.Right)
             {              
                 Console.WriteLine("Clicked tileIndex: ({0}, {1}), z = {2}, water = {3}", x, y, t.Elevation, t.Water);
-                Console.WriteLine("WorldPos: ({0},{1})", index.X, index.Y);
-                Console.WriteLine("Wind dir: {0}", t.WindDirection);
+                Console.WriteLine("WorldPos: ({0},{1}), LandmassID: {2}", index.X, index.Y, t.LandmassId);
+                Console.WriteLine("Wind dir: {0}, str: {1}", Math.Round(t.WindDirection, 3), Math.Round(t.WindStrength, 3));
                 //Console.WriteLine("DownslopeDir: ({0},{1}), Downhill to sea:{2}", t.DownslopeDir.X, t.DownslopeDir.Y, t.DownhillToSea);
                 //Console.WriteLine("River volume: {0}. River source: {1}", t.RiverVolume, t.RiverSource);
                 Console.WriteLine();
@@ -903,6 +972,14 @@ namespace ReSource
             {
                 drawWind = !drawWind;
                 drawDownslopes = false;
+                CreateVertexArray();
+            }
+            if (e.Code == Keyboard.Key.L)
+            {
+                foreach (MapTile t in Tiles.Values)
+                {
+                    t.SetLandmassColor();
+                }
                 CreateVertexArray();
             }
         }

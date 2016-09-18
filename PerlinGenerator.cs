@@ -35,7 +35,9 @@ namespace ReSource
         }
 
         public static void Randomise(int randomSeed = -1)
-        {
+        {            
+            //default randomseed == -1 is caught in the InitialiseLookupTable function
+            //indicating a new random seed is generated
             lookupTable = InitialiseLookupTable(cap, randomSeed);
         }
 

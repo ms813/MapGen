@@ -17,16 +17,18 @@ namespace ReSource
         SouthPole
     }
 
-    struct Latitude
+    struct WindLatitude
     {
         public LatitudeName Name;
-        public double WindDirection;   //radians from north
+        public double WindDirection;    //radians from north
+        public double WindStrength;     //fraction between 0 and 1
         public double latitude;
 
-        public Latitude(LatitudeName name, double windDir, double lat)
+        public WindLatitude(LatitudeName name, double windDir, double windStrength, double lat)
         {
             this.Name = name;
             this.WindDirection = windDir;
+            this.WindStrength = windStrength;
             this.latitude = lat;
         }
     }
