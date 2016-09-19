@@ -45,6 +45,9 @@ namespace ReSource
         public double PrevailingWindDir { get; set; }
         public double WindNoise { get; set; }
         public double WindStrength { get; set; }
+        public double BaseWindStrength { get; set; }
+        public double ContinentWindStrength { get; set; }
+        public int DistanceToCoast = Int32.MaxValue;
 
         //Biome
         public Biome Biome { get; set; }

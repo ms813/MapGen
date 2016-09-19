@@ -547,20 +547,110 @@ namespace ReSource
             PerlinGenerator.Randomise();
             foreach(MapTile t in Tiles.Values)
             {
-                //reuse wind noise for direction                
                 int featureScale = t.ParentMap.MapSize.Y / 8;
-                t.WindNoise = PerlinGenerator.OctavePerlin(
+                double noise = PerlinGenerator.OctavePerlin(
                     (double)t.GlobalIndex.X / featureScale,
                     (double)t.GlobalIndex.Y / featureScale,
                     5, 0.5);
 
                 //base level wind strength map mixture of noise and latitude
-                t.WindStrength = t.WindNoise + WindHelper.GetBaseWindStrength(t);
+                t.BaseWindStrength = noise + WindHelper.GetBaseWindStrength(t);
             }
 
             //normalise base wind strength map between 0 and 1
-            double min = Tiles.Values.Min(t => t.WindStrength);
-            double max = Tiles.Values.Max(t => t.WindStrength);
+            double min = Tiles.Values.Min(t => t.BaseWindStrength);
+            double max = Tiles.Values.Max(t => t.BaseWindStrength);
+            foreach(MapTile t in Tiles.Values)
+            {
+                t.BaseWindStrength = MathHelper.Scale(min, max, 0, 1, t.BaseWindStrength);
+            }
+
+            //threshold distance from coast for max wind
+            int windThresholdDist = 30;
+
+            //calculate continent wind strength based on distance to coast
+            //do each land tile first
+            foreach(Landmass lm in LandMasses)
+            {
+                //get a list of the coast tiles in each landmass
+                List<MapTile> coastTiles = lm.GetCoastTiles();
+                //set the distance to the coast for these to 0
+                coastTiles.ForEach(t => t.DistanceToCoast = 0);
+
+                //for the non coast tiles, find the closest coast tile and store the distance on the tile
+                foreach(MapTile t in lm.Tiles.Except(coastTiles))
+                {                    
+                    foreach(MapTile c in coastTiles)
+                    {
+                        Vector2i vdist = t.GlobalIndex - c.GlobalIndex;
+                        int dist = Math.Abs(vdist.X) + Math.Abs(vdist.Y);
+                        if (dist < t.DistanceToCoast)
+                        {
+                            t.DistanceToCoast = dist;
+                        }
+                    }
+                }
+            }
+
+            //do the sea tiles next
+            IEnumerable<MapTile> seaTiles = Tiles.Values.Where(t => t.Water == WaterType.Ocean);
+            foreach(MapTile t in seaTiles)
+            {
+                //find the closest landmass
+
+                //TODO this part doesnt work properly, need a quad tree or something!
+                Landmass closestLm = LandMasses[0];
+                int closestDist = Int32.MaxValue;
+                foreach(Landmass lm in LandMasses)
+                {
+                    Vector2i vdist = lm.GetCenter() - t.GlobalIndex;
+                    int dist = Math.Abs(vdist.X) + Math.Abs(vdist.Y);
+                    if (dist < closestDist)
+                    {
+                        closestDist = dist;
+                        closestLm = lm;
+                    }
+                }
+
+                //then check each coast tile on the closest landmass
+                foreach(MapTile coastTile in closestLm.GetCoastTiles())
+                {
+                    Vector2i vdist = coastTile.GlobalIndex - t.GlobalIndex;
+                    int dist = Math.Abs(vdist.X) + Math.Abs(vdist.Y);
+                    if (dist < t.DistanceToCoast)
+                    {
+                        t.DistanceToCoast = dist;
+                    }
+                }
+            }
+
+            
+            foreach(MapTile t in Tiles.Values)
+            {
+
+                //scale wind strength using the threshold value
+                double x = (double)t.DistanceToCoast / windThresholdDist;
+                x = MathHelper.Clamp(x, 1, 0);
+                if(t.Water == WaterType.Ocean)
+                {
+                    t.ContinentWindStrength = MathHelper.SmoothStep(1d - x/2d);
+                }
+                else
+                {
+                    t.ContinentWindStrength = MathHelper.SmoothStep((1d - x) / 2d);
+                }                
+            }
+
+            //add the base speed and the continent speed to get the wind speed
+            foreach(MapTile t in Tiles.Values)
+            {               
+                //t.WindStrength = t.BaseWindStrength * t.ContinentWindStrength;
+                //t.WindStrength = t.BaseWindStrength + t.ContinentWindStrength;
+                t.WindStrength = t.ContinentWindStrength;
+            }
+
+            min = Tiles.Values.Min(t => t.WindStrength);
+            max = Tiles.Values.Max(t => t.WindStrength);
             foreach(MapTile t in Tiles.Values)
             {
                 t.WindStrength = MathHelper.Scale(min, max, 0, 1, t.WindStrength);

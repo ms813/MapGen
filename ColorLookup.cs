@@ -12,8 +12,7 @@ namespace ReSource
     {
         public static readonly List<Color> Color = new List<Color>
         {
-            new Color(255,0,0),
-            new Color(204,0,0),
+            new Color(255,0,0),            
             new Color(76,19,19),
             new Color(178,89,89),
             new Color(255,162,128),
@@ -52,7 +51,8 @@ namespace ReSource
             new Color(51,0,27), 
             new Color(230,57,149), 
             new Color(255,191,225), 
-            new Color(242,0,65)
+            new Color(242,0,65),
+            new Color(204,0,0)
         };
     }
 }
