@@ -13,17 +13,19 @@ namespace ReSource
         public static Random rnd = new Random();
 
         public static Vector2i[] CardinalDirections = {
-            new Vector2i(0, -1),     //north
-            new Vector2i(1, 0),      //east            
-            new Vector2i(0, 1),     //south
-            new Vector2i(-1, 0)     //west            
+            new Vector2i(0, -1),        //north
+            new Vector2i(1, 0),         //east            
+            new Vector2i(0, 1),         //south
+            new Vector2i(-1, 0)         //west            
         };
 
+
+
         public static Vector2i[] OrdinalDirections = {
-            new Vector2i(1,-1),     //northeast
-            new Vector2i(1, 1),      //southeast            
-            new Vector2i(-1, 1),    //southwest
-            new Vector2i(-1, -1)    //northwest
+            new Vector2i(1,-1),         //northeast
+            new Vector2i(1, 1),         //southeast            
+            new Vector2i(-1, 1),        //southwest
+            new Vector2i(-1, -1)        //northwest
         };
         
         public static double NormalDistribution(double mean = 0, double stdDev = 1)
@@ -60,6 +62,11 @@ namespace ReSource
             return result;
         } 
 
+        public static int TaxicabDistance(Vector2i a, Vector2i b)
+        {
+            Vector2i d = a - b;
+            return Math.Abs(d.X) + Math.Abs(d.Y);
+        }
 
         //Vector math
         public static float Magnitude(Vector2f v)

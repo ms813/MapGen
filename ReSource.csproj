@@ -102,7 +102,6 @@
     <Compile Include="ColorLookup.cs" />
     <Compile Include="Game.cs" />
     <Compile Include="GameState.cs" />
-    <Compile Include="GridTile.cs" />
     <Compile Include="LandMass.cs" />
     <Compile Include="Latitude.cs" />
     <Compile Include="MapMoveEventArgs.cs" />

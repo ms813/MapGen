@@ -16,6 +16,7 @@ namespace ReSource
         private Dictionary<Vector2i, MapTile> Tiles = new Dictionary<Vector2i, MapTile>();
         private List<Vector2i> ActiveTileIndices = new List<Vector2i>();
         private List<Landmass> LandMasses = new List<Landmass>();
+        private ChunkGrid chunkGrid;
 
         private RectangleShape HighlightShape;
         private VertexArray vertices;
@@ -23,6 +24,7 @@ namespace ReSource
         private bool drawDownslopes = false;
         private bool drawRandomWalks = false;
         private bool drawWind = false;
+        private bool drawChunks = false;
 
         //public static Font Font = new Font(@"..\..\..\resources\fonts\arial.ttf");
 
@@ -53,8 +55,9 @@ namespace ReSource
             ExecuteTimedFunction(AssignLandMasses);
             ExecuteTimedFunction(AssignCoast);
             ExecuteTimedFunction(AssignDownslopes);
+            ExecuteTimedFunction(InitialiseChunkGrid);
             ExecuteTimedFunction(GenerateWindDirection);
-            //ExecuteTimedFunction(CalculateWindSpeed);
+            ExecuteTimedFunction(CalculateWindSpeed);
             ExecuteTimedFunction(CreateRivers);            
             //ExecuteTimedFunction(AssignMoisture);
             //ExecuteTimedFunction(AssignBiomes);
@@ -87,6 +90,7 @@ namespace ReSource
 
         private void CreateTiles()
         {
+            
             //create all tiles and assign them a global index            
             for (int x = 0; x < MapSize.X; x++)
             {
@@ -94,7 +98,7 @@ namespace ReSource
                 {
                     Vector2i tileIndex = new Vector2i(x, y);
                     MapTile tile = new MapTile(this, tileIndex, TileSize);                    
-                    Tiles.Add(tileIndex, tile);
+                    Tiles.Add(tileIndex, tile);                    
                 }
             }
         }
@@ -504,6 +508,16 @@ namespace ReSource
             }
         }
 
+        private void InitialiseChunkGrid()
+        {
+            chunkGrid = new ChunkGrid(MapSize.X, MapSize.Y, 16);
+
+            foreach(MapTile t in Tiles.Values)
+            {
+                chunkGrid.Add(t);
+            }
+        }
+
         private void GenerateWindDirection()
         {
             //refresh the perlin generator to get new noise values
@@ -569,75 +583,46 @@ namespace ReSource
             int windThresholdDist = 30;
 
             //calculate continent wind strength based on distance to coast
-            //do each land tile first
+            //set each coast tile distance to 0
             foreach(Landmass lm in LandMasses)
             {
                 //get a list of the coast tiles in each landmass
                 List<MapTile> coastTiles = lm.GetCoastTiles();
                 //set the distance to the coast for these to 0
                 coastTiles.ForEach(t => t.DistanceToCoast = 0);
-
-                //for the non coast tiles, find the closest coast tile and store the distance on the tile
-                foreach(MapTile t in lm.Tiles.Except(coastTiles))
-                {                    
-                    foreach(MapTile c in coastTiles)
-                    {
-                        Vector2i vdist = t.GlobalIndex - c.GlobalIndex;
-                        int dist = Math.Abs(vdist.X) + Math.Abs(vdist.Y);
-                        if (dist < t.DistanceToCoast)
-                        {
-                            t.DistanceToCoast = dist;
-                        }
-                    }
-                }
             }
 
-            //do the sea tiles next
-            IEnumerable<MapTile> seaTiles = Tiles.Values.Where(t => t.Water == WaterType.Ocean);
-            foreach(MapTile t in seaTiles)
-            {
-                //find the closest landmass
-
-                //TODO this part doesnt work properly, need a quad tree or something!
-                Landmass closestLm = LandMasses[0];
-                int closestDist = Int32.MaxValue;
-                foreach(Landmass lm in LandMasses)
-                {
-                    Vector2i vdist = lm.GetCenter() - t.GlobalIndex;
-                    int dist = Math.Abs(vdist.X) + Math.Abs(vdist.Y);
-                    if (dist < closestDist)
-                    {
-                        closestDist = dist;
-                        closestLm = lm;
-                    }
-                }
-
-                //then check each coast tile on the closest landmass
-                foreach(MapTile coastTile in closestLm.GetCoastTiles())
-                {
-                    Vector2i vdist = coastTile.GlobalIndex - t.GlobalIndex;
-                    int dist = Math.Abs(vdist.X) + Math.Abs(vdist.Y);
-                    if (dist < t.DistanceToCoast)
-                    {
-                        t.DistanceToCoast = dist;
-                    }
-                }
-            }
-
-            
+            //do the non-coast tiles next
+            Console.WriteLine();
+            int i = 0;
             foreach(MapTile t in Tiles.Values)
             {
+                i++;
+                if(i % (Tiles.Count/20) == 0)
+                {
+                    Console.SetCursorPosition(0, Console.CursorTop);
+                    Console.Write("({0}/{1})", i, Tiles.Count);
+                }
+                
+                if(!t.Coast)
+                {
+                    MapTile closestCoastTile = chunkGrid.FindNearestCoast(t);
+                    t.DistanceToCoast = MathHelper.TaxicabDistance(closestCoastTile.GlobalIndex, t.GlobalIndex);
+                }
+            }
 
+            foreach(MapTile t in Tiles.Values)
+            {
                 //scale wind strength using the threshold value
                 double x = (double)t.DistanceToCoast / windThresholdDist;
                 x = MathHelper.Clamp(x, 1, 0);
                 if(t.Water == WaterType.Ocean)
                 {
-                    t.ContinentWindStrength = MathHelper.SmoothStep(1d - x/2d);
+                    t.ContinentWindStrength = MathHelper.SmoothStep(x);
                 }
                 else
                 {
-                    t.ContinentWindStrength = MathHelper.SmoothStep((1d - x) / 2d);
+                    t.ContinentWindStrength = -MathHelper.SmoothStep(x);
                 }                
             }
 
@@ -748,8 +733,7 @@ namespace ReSource
             double minFreshWaterDist = Double.MaxValue;
             foreach(MapTile waterTile in waterTiles)
             {
-                Vector2i dir = waterTile.GlobalIndex - tile.GlobalIndex;
-                int freshWaterDist = Math.Abs(dir.X) + Math.Abs(dir.Y);
+                int freshWaterDist = MathHelper.TaxicabDistance(waterTile.GlobalIndex, tile.GlobalIndex);
 
                 if(freshWaterDist < minFreshWaterDist)
                 {
@@ -918,7 +902,9 @@ namespace ReSource
             if(drawDownslopes) window.Draw(downslopeArrows);
             if (drawRandomWalks) randomWalks.ForEach(va => window.Draw(va));
             if (drawWind) window.Draw(windArrows);
-           
+            if (drawChunks) chunkGrid.Draw(window, TileSize);
+
+
             if (drawHighlight)
             {
                 window.Draw(HighlightShape);
@@ -1072,6 +1058,10 @@ namespace ReSource
                     t.SetLandmassColor();
                 }
                 CreateVertexArray();
+            }
+            if (e.Code == Keyboard.Key.C)
+            {
+                drawChunks = !drawChunks;                                
             }
         }
 
