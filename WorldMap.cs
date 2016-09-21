@@ -54,13 +54,13 @@ namespace ReSource
             ExecuteTimedFunction(AssignCoast);
             ExecuteTimedFunction(AssignDownslopes);
             ExecuteTimedFunction(GenerateWindDirection);
-            ExecuteTimedFunction(CalculateWindSpeed);
+            //ExecuteTimedFunction(CalculateWindSpeed);
             ExecuteTimedFunction(CreateRivers);            
             //ExecuteTimedFunction(AssignMoisture);
             //ExecuteTimedFunction(AssignBiomes);
             ExecuteTimedFunction(InitialiseDisplay);
-            ExecuteTimedFunction(CreateVertexArray);            
-            
+            ExecuteTimedFunction(CreateVertexArray);
+             
             Console.WriteLine("Build finished in {0} s", TotalBuildTime/1000d);
         }
 
@@ -923,6 +923,7 @@ namespace ReSource
             {
                 window.Draw(HighlightShape);
             }
+
             watch.Stop();
             //Console.WriteLine("Draw: {0}:", watch.ElapsedMilliseconds);
         }
@@ -1112,6 +1113,6 @@ namespace ReSource
                     }                    
                 }
             }
-        }        
+        }       
     }
 }

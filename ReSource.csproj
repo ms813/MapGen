@@ -99,7 +99,6 @@
     <Compile Include="ActionState.cs" />
     <Compile Include="Biome.cs" />
     <Compile Include="ColorLookup.cs" />
-    <Compile Include="Direction.cs" />
     <Compile Include="Game.cs" />
     <Compile Include="GameState.cs" />
     <Compile Include="LandMass.cs" />
