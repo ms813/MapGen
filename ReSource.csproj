@@ -13,7 +13,7 @@
     <FileAlignment>512</FileAlignment>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
-    <PlatformTarget>AnyCPU</PlatformTarget>
+    <PlatformTarget>x64</PlatformTarget>
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
@@ -98,9 +98,11 @@
   <ItemGroup>
     <Compile Include="ActionState.cs" />
     <Compile Include="Biome.cs" />
+    <Compile Include="ChunkGrid.cs" />
     <Compile Include="ColorLookup.cs" />
     <Compile Include="Game.cs" />
     <Compile Include="GameState.cs" />
+    <Compile Include="GridTile.cs" />
     <Compile Include="LandMass.cs" />
     <Compile Include="Latitude.cs" />
     <Compile Include="MapMoveEventArgs.cs" />

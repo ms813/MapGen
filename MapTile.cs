@@ -9,7 +9,7 @@ using SFML.System;
 
 namespace ReSource
 {
-    class MapTile
+    class MapTile : GridTile
     {
         /*
          * For any map
@@ -19,7 +19,7 @@ namespace ReSource
         public WorldMap ParentMap { get; private set; }
         public List<MapTile> OrthogonalNeighbours = new List<MapTile>();
         public List<MapTile> DiagonalNeighbours = new List<MapTile>();
-        private int tileSize;
+        public int TileSize { get; private set; }
         public int LandmassId = -1;
 
         //Elevation
@@ -58,7 +58,7 @@ namespace ReSource
         public MapTile(WorldMap parentMap, Vector2i globalIndex, int tileSize)
         {
             this.ParentMap = parentMap;
-            this.tileSize = tileSize;
+            this.TileSize = tileSize;
             this.GlobalIndex = globalIndex;          
             
             Water = WaterType.Unassigned;            
