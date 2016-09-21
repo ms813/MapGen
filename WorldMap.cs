@@ -24,7 +24,7 @@ namespace ReSource
         private bool drawRandomWalks = false;
         private bool drawWind = false;
 
-        public static Font Font = new Font(@"..\..\..\resources\fonts\arial.ttf");
+        //public static Font Font = new Font(@"..\..\..\resources\fonts\arial.ttf");
 
         public int TileSize = 32;        
 
