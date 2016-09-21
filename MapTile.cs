@@ -9,7 +9,7 @@ using SFML.System;
 
 namespace ReSource
 {
-    class MapTile : GridTile
+    class MapTile
     {
         /*
          * For any map
@@ -154,6 +154,6 @@ namespace ReSource
         public void Update(float dt)
         {
 
-        }     
+        }             
     }
 }

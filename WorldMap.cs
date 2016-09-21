@@ -34,8 +34,6 @@ namespace ReSource
         public readonly double mountainThreshold = 0.45d;       //cutoff height for a tile to be considered a mountain
 
         public Vector2i MapSize { get; private set; }        
-        
-        public static readonly bool SpriteDraw = false;
 
         public WorldMap(Vector2i mapSize)
         {
@@ -54,7 +52,7 @@ namespace ReSource
             ExecuteTimedFunction(AssignCoast);
             ExecuteTimedFunction(AssignDownslopes);
             ExecuteTimedFunction(GenerateWindDirection);
-            //ExecuteTimedFunction(CalculateWindSpeed);
+            ExecuteTimedFunction(CalculateWindSpeed);
             ExecuteTimedFunction(CreateRivers);            
             //ExecuteTimedFunction(AssignMoisture);
             //ExecuteTimedFunction(AssignBiomes);
@@ -570,61 +568,34 @@ namespace ReSource
 
             //calculate continent wind strength based on distance to coast
             //do each land tile first
-            foreach(Landmass lm in LandMasses)
+            Console.WriteLine();
+            for (int i = 0; i < LandMasses.Count(); i++ )            
             {
+                Console.SetCursorPosition(0, Console.CursorTop);
+                Console.Write("Calculating Distance to coast for landmass {0} of {1}", i + 1, LandMasses.Count);
+
                 //get a list of the coast tiles in each landmass
-                List<MapTile> coastTiles = lm.GetCoastTiles();
+                List<MapTile> coastTiles = LandMasses[i].GetCoastTiles();
+                
                 //set the distance to the coast for these to 0
                 coastTiles.ForEach(t => t.DistanceToCoast = 0);
 
-                //for the non coast tiles, find the closest coast tile and store the distance on the tile
-                foreach(MapTile t in lm.Tiles.Except(coastTiles))
-                {                    
-                    foreach(MapTile c in coastTiles)
+                foreach (MapTile coastTile in coastTiles)
+                {
+                    List<MapTile> surrounding = GetTilesSurrounding(coastTile, windThresholdDist);                   
+
+                    foreach (MapTile surroundingTile in surrounding)
                     {
-                        Vector2i vdist = t.GlobalIndex - c.GlobalIndex;
-                        int dist = Math.Abs(vdist.X) + Math.Abs(vdist.Y);
-                        if (dist < t.DistanceToCoast)
-                        {
-                            t.DistanceToCoast = dist;
+                        int dist = MathHelper.TaxicabDistance(surroundingTile.GlobalIndex, coastTile.GlobalIndex);
+                        
+                        if (dist < surroundingTile.DistanceToCoast)
+                        {                            
+                            surroundingTile.DistanceToCoast = dist;
                         }
                     }
                 }
-            }
-
-            //do the sea tiles next
-            IEnumerable<MapTile> seaTiles = Tiles.Values.Where(t => t.Water == WaterType.Ocean);
-            foreach(MapTile t in seaTiles)
-            {
-                //find the closest landmass
-
-                //TODO this part doesnt work properly, need a quad tree or something!
-                Landmass closestLm = LandMasses[0];
-                int closestDist = Int32.MaxValue;
-                foreach(Landmass lm in LandMasses)
-                {
-                    Vector2i vdist = lm.GetCenter() - t.GlobalIndex;
-                    int dist = Math.Abs(vdist.X) + Math.Abs(vdist.Y);
-                    if (dist < closestDist)
-                    {
-                        closestDist = dist;
-                        closestLm = lm;
-                    }
-                }
-
-                //then check each coast tile on the closest landmass
-                foreach(MapTile coastTile in closestLm.GetCoastTiles())
-                {
-                    Vector2i vdist = coastTile.GlobalIndex - t.GlobalIndex;
-                    int dist = Math.Abs(vdist.X) + Math.Abs(vdist.Y);
-                    if (dist < t.DistanceToCoast)
-                    {
-                        t.DistanceToCoast = dist;
-                    }
-                }
-            }
-
-            
+            }           
+                        
             foreach(MapTile t in Tiles.Values)
             {
 
@@ -633,7 +604,7 @@ namespace ReSource
                 x = MathHelper.Clamp(x, 1, 0);
                 if(t.Water == WaterType.Ocean)
                 {
-                    t.ContinentWindStrength = MathHelper.SmoothStep(1d - x/2d);
+                    t.ContinentWindStrength = MathHelper.SmoothStep((1d + x) / 2d);
                 }
                 else
                 {
@@ -645,8 +616,8 @@ namespace ReSource
             foreach(MapTile t in Tiles.Values)
             {               
                 //t.WindStrength = t.BaseWindStrength * t.ContinentWindStrength;
-                //t.WindStrength = t.BaseWindStrength + t.ContinentWindStrength;
-                t.WindStrength = t.ContinentWindStrength;
+                t.WindStrength = t.BaseWindStrength + t.ContinentWindStrength;
+                //t.WindStrength = t.ContinentWindStrength;
             }
 
             min = Tiles.Values.Min(t => t.WindStrength);
@@ -655,8 +626,7 @@ namespace ReSource
             {
                 t.WindStrength = MathHelper.Scale(min, max, 0, 1, t.WindStrength);
             }
-        }
-         
+        }        
 
         private void CreateRivers()
         {
@@ -1007,7 +977,7 @@ namespace ReSource
             {              
                 Console.WriteLine("Clicked tileIndex: ({0}, {1}), z = {2}, water = {3}", x, y, t.Elevation, t.Water);
                 Console.WriteLine("WorldPos: ({0},{1}), LandmassID: {2}", index.X, index.Y, t.LandmassId);
-                Console.WriteLine("Wind dir: {0}, str: {1}", Math.Round(t.WindDirection, 3), Math.Round(t.WindStrength, 3));
+                Console.WriteLine("Wind dir: {0}, str: {1}, distToCoast: {2}", Math.Round(t.WindDirection, 3), Math.Round(t.WindStrength, 3), t.DistanceToCoast);
                 //Console.WriteLine("DownslopeDir: ({0},{1}), Downhill to sea:{2}", t.DownslopeDir.X, t.DownslopeDir.Y, t.DownhillToSea);
                 //Console.WriteLine("River volume: {0}. River source: {1}", t.RiverVolume, t.RiverSource);
                 Console.WriteLine();
@@ -1113,6 +1083,45 @@ namespace ReSource
                     }                    
                 }
             }
-        }       
+        }      
+ 
+        private List<MapTile> GetTilesSurrounding(MapTile t, int radius)
+        {
+            int xs = t.GlobalIndex.X;
+            int ys = t.GlobalIndex.Y; // Start coordinates
+            List<MapTile> surrounding = new List<MapTile>();
+            
+
+            for (int d = 1; d < radius; d++)
+            {
+                for (int i = 0; i < d + 1; i++)
+                {
+                    int x = xs - d + i;
+                    int y = ys - i;
+
+                    if (GetTileByIndex(x, y) != null) surrounding.Add(GetTileByIndex(x, y));                        
+
+                    x = xs + d - i;
+                    y = ys + i;
+
+                    if (GetTileByIndex(x, y) != null) surrounding.Add(GetTileByIndex(x, y));  
+                }
+
+
+                for (int i = 1; i < d; i++)
+                {
+                    int x = xs - i;
+                    int y = ys + d - i;
+
+                    if (GetTileByIndex(x, y) != null) surrounding.Add(GetTileByIndex(x, y));  
+
+                    x = xs + d - i;
+                    y = ys - i;
+
+                    if (GetTileByIndex(x, y) != null) surrounding.Add(GetTileByIndex(x, y));  
+                }
+            }
+            return surrounding;
+        }
     }
 }

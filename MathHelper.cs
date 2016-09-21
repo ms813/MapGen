@@ -58,8 +58,13 @@ namespace ReSource
             if (value.CompareTo(min) < 0)
                 result = min;
             return result;
-        } 
+        }
 
+        public static int TaxicabDistance(Vector2i a, Vector2i b)
+        {
+            Vector2i d = a - b;
+            return Math.Abs(d.X) + Math.Abs(d.Y);
+        }
 
         //Vector math
         public static float Magnitude(Vector2f v)
