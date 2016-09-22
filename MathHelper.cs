@@ -12,18 +12,32 @@ namespace ReSource
     {
         public static Random rnd = new Random();
 
+        public class Direction
+        {
+            public static Vector2i North = new Vector2i(0, -1);
+            public static Vector2i East = new Vector2i(1, 0);
+            public static Vector2i South = new Vector2i(0, 1);
+            public static Vector2i West = new Vector2i(-1, 0);
+
+            public static Vector2i NorthEast = new Vector2i(1, -1);
+            public static Vector2i SouthEast = new Vector2i(1, 1);
+            public static Vector2i SouthWest = new Vector2i(-1, 1);
+            public static Vector2i NorthWest = new Vector2i(-1, -1);
+        }
+        
+
         public static Vector2i[] CardinalDirections = {
-            new Vector2i(0, -1),     //north
-            new Vector2i(1, 0),      //east            
-            new Vector2i(0, 1),     //south
-            new Vector2i(-1, 0)     //west            
+           Direction.North,
+           Direction.East,
+           Direction.South,
+           Direction.West
         };
 
         public static Vector2i[] OrdinalDirections = {
-            new Vector2i(1,-1),     //northeast
-            new Vector2i(1, 1),      //southeast            
-            new Vector2i(-1, 1),    //southwest
-            new Vector2i(-1, -1)    //northwest
+            Direction.NorthEast,
+            Direction.SouthEast,
+            Direction.SouthWest,
+            Direction.NorthWest
         };
         
         public static double NormalDistribution(double mean = 0, double stdDev = 1)
@@ -106,6 +120,45 @@ namespace ReSource
             }
         }
 
+        public static Vector2i ToPrincipalDirection(Vector2f v)
+        {
+            double angle = VectorToAngle(v);
+            Console.WriteLine(angle);
+            //check which 8th of the compass rose the angle lies in
+            if ((angle > -(1d / 8d) * Math.PI) && (angle <= (1d / 8d) * Math.PI))
+            {                
+                return Direction.East;
+            }
+            else if ((angle > (1d / 8d) * Math.PI) && (angle <= (3d / 8d) * Math.PI))
+            {
+                return Direction.NorthEast;
+            }
+            else if ((angle > (3d / 8d) * Math.PI) && (angle <= (5d / 8d) * Math.PI))
+            {
+                return Direction.North;
+            }
+            else if ((angle > (5d / 8d) * Math.PI) && (angle <= (7d / 8d) * Math.PI))
+            {
+                return Direction.NorthWest;
+            }
+            else if ((angle > -(1d / 8d) * Math.PI) && (angle <= -(3d/ 8d) * Math.PI))
+            {
+                return Direction.SouthEast;
+            }
+            else if ((angle > -(3d / 8d) * Math.PI) && (angle <= -(5d / 8d) * Math.PI))
+            {
+                return Direction.South;
+            }
+            else if ((angle > -(5d / 8d) * Math.PI) && (angle <= -(7d / 8d) * Math.PI))
+            {
+                return Direction.SouthWest;
+            }
+            else
+            {
+                return Direction.West;
+            }
+        }
+
         public static Vector2f Normalise(Vector2i v)
         {
             return Normalise((Vector2f)v);
@@ -131,5 +184,10 @@ namespace ReSource
         {
             return Normalise(new Vector2f((float)Math.Sin(angle), (float)Math.Cos(angle)));
         }
+
+        public static double VectorToAngle(Vector2f v)
+        {
+            return Math.Atan2(v.Y, v.X);
+        }           
     }
 }

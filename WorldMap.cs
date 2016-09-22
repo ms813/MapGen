@@ -54,7 +54,8 @@ namespace ReSource
             ExecuteTimedFunction(GenerateWindDirection);
             ExecuteTimedFunction(CalculateWindSpeed);
             ExecuteTimedFunction(CalculateTemperature);
-            ExecuteTimedFunction(CreateRivers);            
+            ExecuteTimedFunction(CreateRivers);
+            ExecuteTimedFunction(CalculateRainShadow);
             //ExecuteTimedFunction(AssignMoisture);
             //ExecuteTimedFunction(AssignBiomes);
             ExecuteTimedFunction(InitialiseDisplay);
@@ -736,7 +737,12 @@ namespace ReSource
                     Console.WriteLine("River reached a minima, shouldnt happen!");
                 }
             }            
-        }            
+        }         
+   
+        private void CalculateRainShadow()
+        {
+            
+        }
    
         private void AssignMoisture()
         {
