@@ -19,11 +19,13 @@ namespace ReSource
         {
             Styles windowStyle = Styles.Close;
 
+            //get the size of the primary system monitor and set the window to half that size
             System.Drawing.Rectangle screenSize = System.Windows.Forms.Screen.PrimaryScreen.WorkingArea;
             WindowSize = new Vector2u((uint)screenSize.Width / 2, (uint)screenSize.Height/2);
-            Console.WriteLine("Screen: {0}", System.Windows.Forms.Screen.PrimaryScreen.DeviceName);
-            RenderWindow window = new RenderWindow(new VideoMode(WindowSize.X, WindowSize.Y), "", windowStyle);            
             
+            //create the game window
+            RenderWindow window = new RenderWindow(new VideoMode(WindowSize.X, WindowSize.Y), "", windowStyle);
+
             /*
              * Bind event handlers
              */

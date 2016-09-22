@@ -53,6 +53,7 @@ namespace ReSource
             ExecuteTimedFunction(AssignDownslopes);
             ExecuteTimedFunction(GenerateWindDirection);
             ExecuteTimedFunction(CalculateWindSpeed);
+            ExecuteTimedFunction(CalculateTemperature);
             ExecuteTimedFunction(CreateRivers);            
             //ExecuteTimedFunction(AssignMoisture);
             //ExecuteTimedFunction(AssignBiomes);
@@ -624,8 +625,64 @@ namespace ReSource
             {
                 t.WindStrength = MathHelper.Scale(min, max, 0, 1, t.WindStrength);
             }
-        }        
+        }
 
+        
+        private void CalculateTemperature()
+        {
+            //re-randomise the perlin generator as we will be using it to create noise
+            PerlinGenerator.Randomise();
+            double temperatureDisortionFactor = 0.5;
+            double oceanTempScaleFactor = 0.8;
+
+            foreach (MapTile t in Tiles.Values)
+            {
+                double fractionalLatitude = (double)t.GlobalIndex.Y / MapSize.Y;
+                double tBase;
+                if(fractionalLatitude < 0.5)
+                {
+                    //tile is in the northern hemisphere
+
+                    //assign temperature of 0 at the top, 1 at the equator
+                    tBase = 2 * fractionalLatitude;
+
+                }
+                else
+                {
+                    //tile is in the southern hemisphere
+
+                    //assign temperature of 1 in the middle, 0 at the bottom
+                    tBase = 2 * (1 - fractionalLatitude);
+                }
+
+                int featureScale = MapSize.Y / 8;
+                double tNoise = PerlinGenerator.OctavePerlin(
+                    (double)t.GlobalIndex.X / featureScale,
+                    (double)t.GlobalIndex.Y / featureScale,
+                    5, 0.5);
+
+                t.Temperature = tBase + (temperatureDisortionFactor * tNoise);
+
+                //make high elevation areas colder
+                if(t.Elevation > mountainThreshold)
+                {
+                    double fractionalEle = MathHelper.Scale(mountainThreshold, MaxElevation, 0, 1, t.Elevation);
+                    t.Temperature *= (1 - fractionalEle);
+                }                
+
+                //reduce sea temperatures
+                if(t.Water == WaterType.Ocean)
+                {
+                    t.Temperature *= oceanTempScaleFactor;
+                }
+            }
+
+            //normalise temperature to between 0 and 1
+            double min = Tiles.Values.Min(t => t.Temperature);
+            double max = Tiles.Values.Max(t => t.Temperature);
+            Tiles.Values.ToList().ForEach(t => t.Temperature = MathHelper.Scale(min, max, 0, 1, t.Temperature));
+        }
+        
         private void CreateRivers()
         {
             List<MapTile> riverSources = GenerateRiverSources((int)Math.Sqrt(MapSize.Y) * 2);
@@ -981,7 +1038,8 @@ namespace ReSource
             {              
                 Console.WriteLine("Clicked tileIndex: ({0}, {1}), z = {2}, water = {3}", x, y, t.Elevation, t.Water);
                 Console.WriteLine("WorldPos: ({0},{1}), LandmassID: {2}", index.X, index.Y, t.LandmassId);
-                Console.WriteLine("Wind dir: {0}, str: {1}, distToCoast: {2}", Math.Round(t.WindDirection, 3), Math.Round(t.WindStrength, 3), t.DistanceToCoast);
+                Console.WriteLine("Temperature: {0}", t.Temperature);
+                //Console.WriteLine("Wind dir: {0}, str: {1}, distToCoast: {2}", Math.Round(t.WindDirection, 3), Math.Round(t.WindStrength, 3), t.DistanceToCoast);
                 //Console.WriteLine("DownslopeDir: ({0},{1}), Downhill to sea:{2}", t.DownslopeDir.X, t.DownslopeDir.Y, t.DownhillToSea);
                 //Console.WriteLine("River volume: {0}. River source: {1}", t.RiverVolume, t.RiverSource);
                 Console.WriteLine();
@@ -1044,6 +1102,14 @@ namespace ReSource
                 foreach (MapTile t in Tiles.Values)
                 {
                     t.SetLandmassColor();
+                }
+                CreateVertexArray();
+            }
+            if(e.Code == Keyboard.Key.T)
+            {
+                foreach(MapTile t in Tiles.Values)
+                {
+                    t.SetTemperatureColor();
                 }
                 CreateVertexArray();
             }

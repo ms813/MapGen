@@ -40,6 +40,9 @@ namespace ReSource
         public WaterType Water { get; set; }
         public bool Coast = false;
 
+        //temperature
+        public double Temperature { get; set; }
+
         //wind        
         public double WindDirection { get; set; }
         public double PrevailingWindDir { get; set; }
@@ -150,6 +153,17 @@ namespace ReSource
             {
                 DisplayColour = ColorLookup.Color[LandmassId % ColorLookup.Color.Count];
             }
+        }
+
+        public void SetTemperatureColor()
+        {
+            Color c = new Color();
+            c.A = 255;
+            double interpolate = MathHelper.Scale(0, 1, 0, 255, Temperature);
+            c.B = (byte)(255 - interpolate);
+            c.R = (byte)(interpolate);
+
+            DisplayColour = c;
         }
         public void Update(float dt)
         {
