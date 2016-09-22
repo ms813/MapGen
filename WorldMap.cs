@@ -883,7 +883,13 @@ namespace ReSource
         public void Draw(RenderWindow window)
         {
             var watch = System.Diagnostics.Stopwatch.StartNew();
-            window.Draw(vertices);
+            try {
+                window.Draw(vertices);
+            }
+            catch (AccessViolationException e)
+            {
+                Console.WriteLine("AccessViolationException: {0}", e.Message);
+            }           
 
             if(drawDownslopes) window.Draw(downslopeArrows);
             if (drawRandomWalks) randomWalks.ForEach(va => window.Draw(va));
