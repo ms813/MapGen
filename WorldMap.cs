@@ -569,36 +569,34 @@ namespace ReSource
             //calculate continent wind strength based on distance to coast
             //do each land tile first
             Console.WriteLine();
-            for (int i = 0; i < LandMasses.Count(); i++ )            
-            {
+            for(int i = 0; i < LandMasses.Count; i++) { 
                 Console.SetCursorPosition(0, Console.CursorTop);
                 Console.Write("Calculating Distance to coast for landmass {0} of {1}", i + 1, LandMasses.Count);
 
                 //get a list of the coast tiles in each landmass
                 List<MapTile> coastTiles = LandMasses[i].GetCoastTiles();
-                
+
                 //set the distance to the coast for these to 0
                 coastTiles.ForEach(t => t.DistanceToCoast = 0);
 
-                foreach (MapTile coastTile in coastTiles)
+                Parallel.ForEach(coastTiles, coastTile =>
                 {
-                    List<MapTile> surrounding = GetTilesSurrounding(coastTile, windThresholdDist);                   
+                    List<MapTile> surrounding = GetTilesSurrounding(coastTile, windThresholdDist);
 
                     foreach (MapTile surroundingTile in surrounding)
                     {
                         int dist = MathHelper.TaxicabDistance(surroundingTile.GlobalIndex, coastTile.GlobalIndex);
-                        
+
                         if (dist < surroundingTile.DistanceToCoast)
-                        {                            
+                        {
                             surroundingTile.DistanceToCoast = dist;
                         }
                     }
-                }
-            }           
-                        
+                });
+            }
+          
             foreach(MapTile t in Tiles.Values)
             {
-
                 //scale wind strength using the threshold value
                 double x = (double)t.DistanceToCoast / windThresholdDist;
                 x = MathHelper.Clamp(x, 1, 0);

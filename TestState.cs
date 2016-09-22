@@ -22,7 +22,7 @@ namespace ReSource
 
         private ActionState actionState = ActionState.NONE;
         private float ZoomLevel = 1f;        
-        private int mapY = 256;
+        private int mapY = 128;
         private float MaxZoom;
 
         public TestState(RenderWindow window)

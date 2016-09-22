@@ -4,7 +4,6 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-using SFML;
 using SFML.Window;
 using SFML.Graphics;
 using SFML.System;
@@ -14,11 +13,15 @@ namespace ReSource
     class Game
     {
         private Stack<GameState> gameStates = new Stack<GameState>();
-        public static Vector2u WindowSize = new Vector2u(1080, 720);
+        public static Vector2u WindowSize;
 
         public void Start()
         {
             Styles windowStyle = Styles.Close;
+
+            System.Drawing.Rectangle screenSize = System.Windows.Forms.Screen.PrimaryScreen.WorkingArea;
+            WindowSize = new Vector2u((uint)screenSize.Width / 2, (uint)screenSize.Height/2);
+            Console.WriteLine("Screen: {0}", System.Windows.Forms.Screen.PrimaryScreen.DeviceName);
             RenderWindow window = new RenderWindow(new VideoMode(WindowSize.X, WindowSize.Y), "", windowStyle);            
             
             /*
