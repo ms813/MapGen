@@ -7,11 +7,11 @@ using SFML.Graphics;
 
 namespace ReSource
 {
-    public struct WindColorMap
+    public struct WindColor
     {
         public double Direction;
         public Color Color;
-        public WindColorMap(double dir, Color c)
+        public WindColor(double dir, Color c)
         {
             this.Direction = dir;
             this.Color = c;

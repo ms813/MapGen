@@ -120,13 +120,12 @@ namespace ReSource
             }
         }
 
-        public static Vector2i ToPrincipalDirection(Vector2f v)
+        //input an angle and convert it to a Vector2i representing N,E,S,W, NE, SE, SW, NW
+        public static Vector2i ToPrincipalDirection(double angle)
         {
-            double angle = VectorToAngle(v);
-            Console.WriteLine(angle);
             //check which 8th of the compass rose the angle lies in
             if ((angle > -(1d / 8d) * Math.PI) && (angle <= (1d / 8d) * Math.PI))
-            {                
+            {
                 return Direction.East;
             }
             else if ((angle > (1d / 8d) * Math.PI) && (angle <= (3d / 8d) * Math.PI))
@@ -141,7 +140,7 @@ namespace ReSource
             {
                 return Direction.NorthWest;
             }
-            else if ((angle > -(1d / 8d) * Math.PI) && (angle <= -(3d/ 8d) * Math.PI))
+            else if ((angle > -(1d / 8d) * Math.PI) && (angle <= -(3d / 8d) * Math.PI))
             {
                 return Direction.SouthEast;
             }
@@ -157,6 +156,11 @@ namespace ReSource
             {
                 return Direction.West;
             }
+        }
+
+        public static Vector2i ToPrincipalDirection(Vector2f v)
+        {
+            return ToPrincipalDirection(VectorToAngle(v));
         }
 
         public static Vector2f Normalise(Vector2i v)

@@ -573,7 +573,7 @@ namespace ReSource
             Console.WriteLine();
             for(int i = 0; i < LandMasses.Count; i++) { 
                 Console.SetCursorPosition(0, Console.CursorTop);
-                Console.Write("Calculating Distance to coast for landmass {0} of {1}", i + 1, LandMasses.Count);
+                Console.Write("\tCalculating distance to coast for landmass {0} of {1}", i + 1, LandMasses.Count);
 
                 //get a list of the coast tiles in each landmass
                 List<MapTile> coastTiles = LandMasses[i].GetCoastTiles();
@@ -741,7 +741,54 @@ namespace ReSource
    
         private void CalculateRainShadow()
         {
-            
+            //loop over non-ocean tiles
+            foreach (MapTile t in Tiles.Values.Where(t => t.Water != WaterType.Ocean))
+            {
+                //follow the wind direction backwards until we reach a water tile//Create a path of MapTiles by following the wind direction backwards until an ocean tile is reached
+                List<MapTile> tilePath = new List<MapTile>();
+
+                MapTile currentTile = t;
+                while(currentTile.Water != WaterType.Ocean)
+                {
+                    //get the principal direction opposite to which the wind is flowing
+                    //(note the negative sign)
+                    Vector2i reverseWindDir = -MathHelper.ToPrincipalDirection(t.WindDirection);                    
+
+                    tilePath.Add(currentTile);
+
+                    //move on to the next tile in the path by adding the current tile index to the reverse wind direction
+                    currentTile = GetTileByIndex(currentTile.GlobalIndex + reverseWindDir);
+                }
+
+                //find the highest point in the path, then check if it is above the mountain threshhold
+                double maxHeightInPath = tilePath.Max(pathTile => pathTile.Elevation);
+                MapTile highestTile = tilePath.Find(pathTile => pathTile.Elevation == maxHeightInPath);
+                double rainShadowThresholdDist = 50d;
+
+                if(maxHeightInPath >= mountainThreshold)
+                {
+                    //there is a mountain between this tile and water, so it is in the rain shadow
+
+                    //find the distance between the high point and the current tile
+                    double dist = MathHelper.TaxicabDistance(t.GlobalIndex, highestTile.GlobalIndex);
+
+                    //clamp the distance to the threshold distance
+                    dist = MathHelper.Clamp(dist, rainShadowThresholdDist, 0);
+
+                    //rescale the max height to between 0 and 1
+                    double maxHeightScale = MathHelper.Scale(mountainThreshold, MaxElevation, 0, 1, maxHeightInPath);
+
+                    //scale the rain shadow with distance to the highest point in the path,
+                    //and by the elevation of the highest point in the path
+                    double d = (1 - (dist / rainShadowThresholdDist)) * maxHeightScale;
+                    t.RainShadow = MathHelper.SmoothStep(d);                    
+                }
+            }
+
+            //normalise the rain shadow to between 0 and 1 (0 receives full rainfall)
+            double min = Tiles.Values.Min(t => t.RainShadow);
+            double max = Tiles.Values.Max(t => t.RainShadow);
+            Tiles.Values.ToList().ForEach(t => t.RainShadow = MathHelper.Scale(min, max, 0, 1, t.RainShadow));
         }
    
         private void AssignMoisture()
@@ -1020,16 +1067,16 @@ namespace ReSource
             int y = (int)Math.Floor(worldPos.Y / TileSize);
 
             return GetTileByIndex(x, y);
-        }          
+        }
 
         public void OnMouseMoved(object sender, MouseMoveEventArgs e)
-        {   
+        {
             Vector2i mousePos = new Vector2i(e.X, e.Y);
-            RenderWindow window = (RenderWindow) sender;
+            RenderWindow window = (RenderWindow)sender;
             Vector2f worldPos = window.MapPixelToCoords(mousePos);
-            
+
             //highlight the tile the mouse is hovering over
-            UpdateMouseHighlight(worldPos);                   
+            UpdateMouseHighlight(worldPos);
         }
 
         public void OnMouseButtonPressed(object sender, MouseButtonEventArgs e)
@@ -1042,9 +1089,9 @@ namespace ReSource
             MapTile t = GetTileByIndex(x,y);
             if(t != null && e.Button == Mouse.Button.Right)
             {              
-                Console.WriteLine("Clicked tileIndex: ({0}, {1}), z = {2}, water = {3}", x, y, t.Elevation, t.Water);
+                Console.WriteLine("Clicked tileIndex: ({0}, {1}), z = {2}, water = {3}", x, y, Math.Round(t.Elevation, 2), t.Water);
                 Console.WriteLine("WorldPos: ({0},{1}), LandmassID: {2}", index.X, index.Y, t.LandmassId);
-                Console.WriteLine("Temperature: {0}", t.Temperature);
+                Console.WriteLine("Temperature: {0}", Math.Round(t.Temperature,2));
                 //Console.WriteLine("Wind dir: {0}, str: {1}, distToCoast: {2}", Math.Round(t.WindDirection, 3), Math.Round(t.WindStrength, 3), t.DistanceToCoast);
                 //Console.WriteLine("DownslopeDir: ({0},{1}), Downhill to sea:{2}", t.DownslopeDir.X, t.DownslopeDir.Y, t.DownhillToSea);
                 //Console.WriteLine("River volume: {0}. River source: {1}", t.RiverVolume, t.RiverSource);
@@ -1060,12 +1107,12 @@ namespace ReSource
                 drawWind = false;
                 CreateVertexArray();
             }
-            if(e.Code == Keyboard.Key.F)
+            else if (e.Code == Keyboard.Key.F)
             {
                 drawRandomWalks = !drawRandomWalks;
                 CreateVertexArray();
             }
-            if(e.Code == Keyboard.Key.M)
+            else if (e.Code == Keyboard.Key.M)
             {
                 foreach (MapTile t in Tiles.Values)
                 {
@@ -1073,7 +1120,7 @@ namespace ReSource
                 }
                 CreateVertexArray();
             }
-            if(e.Code == Keyboard.Key.B)
+            else if (e.Code == Keyboard.Key.B)
             {
                 foreach (MapTile t in Tiles.Values)
                 {
@@ -1081,7 +1128,7 @@ namespace ReSource
                 }
                 CreateVertexArray();
             }
-            if (e.Code == Keyboard.Key.E)
+            else if (e.Code == Keyboard.Key.E)
             {
                 foreach (MapTile t in Tiles.Values)
                 {
@@ -1089,7 +1136,7 @@ namespace ReSource
                 }  
                 CreateVertexArray();
             }
-            if (e.Code == Keyboard.Key.W)
+            else if (e.Code == Keyboard.Key.W)
             {
                 foreach (MapTile t in Tiles.Values)
                 {
@@ -1097,13 +1144,13 @@ namespace ReSource
                 }
                 CreateVertexArray();
             }
-            if (e.Code == Keyboard.Key.Q)
+            else if (e.Code == Keyboard.Key.Q)
             {
                 drawWind = !drawWind;
                 drawDownslopes = false;
                 CreateVertexArray();
             }
-            if (e.Code == Keyboard.Key.L)
+            else if (e.Code == Keyboard.Key.L)
             {
                 foreach (MapTile t in Tiles.Values)
                 {
@@ -1111,11 +1158,19 @@ namespace ReSource
                 }
                 CreateVertexArray();
             }
-            if(e.Code == Keyboard.Key.T)
+            else if (e.Code == Keyboard.Key.T)
             {
                 foreach(MapTile t in Tiles.Values)
                 {
                     t.SetTemperatureColor();
+                }
+                CreateVertexArray();
+            }
+            else if(e.Code == Keyboard.Key.R)
+            {
+                foreach(MapTile t in Tiles.Values)
+                {
+                    t.SetRainShadowColor();
                 }
                 CreateVertexArray();
             }

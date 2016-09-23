@@ -106,7 +106,7 @@
     <Compile Include="RandomWalker.cs" />
     <Compile Include="WaterType.cs" />
     <Compile Include="WindHelper.cs" />
-    <Compile Include="WindColorMap.cs" />
+    <Compile Include="WindColor.cs" />
     <Compile Include="WorldMap.cs" />
     <Compile Include="MapTile.cs" />
     <Compile Include="MathHelper.cs" />

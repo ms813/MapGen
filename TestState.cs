@@ -68,8 +68,8 @@ namespace ReSource
             mouseButtonPressed(sender, e);
             //Console.WriteLine(e);
 
-            //toggle on the Panning action state if the middle mouse button is pressed
-            if(e.Button == Mouse.Button.Middle)
+            //toggle on the Panning action state if the left mouse button is pressed
+            if(e.Button == Mouse.Button.Left)
             {
                 if(actionState != ActionState.PANNING)
                 {
@@ -81,8 +81,8 @@ namespace ReSource
 
         public void OnMouseButtonReleased(object sender, MouseButtonEventArgs e)
         {
-            //toggle off the panning state if the middle mouse button is pressed
-            if(e.Button == Mouse.Button.Middle)
+            //toggle off the panning state if the left mouse button is pressed
+            if(e.Button == Mouse.Button.Left)
             {
                 if(actionState == ActionState.PANNING)
                 {

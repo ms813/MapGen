@@ -24,15 +24,15 @@ namespace ReSource
             new WindLatitude(LatitudeName.SouthPole,    0d,             0.8d,   1d)
         };
 
-        private static readonly WindColorMap[] WindColors = new WindColorMap[]
+        private static readonly WindColor[] WindColors = new WindColor[]
         {
-            new WindColorMap(Math.PI * -0.5d, Color.Red),    //west   
-            new WindColorMap(0, Color.Green),               //north
-            new WindColorMap(Math.PI * 0.5d, Color.Blue),   //east    
-            new WindColorMap(Math.PI, Color.Yellow),        //south
-            new WindColorMap(Math.PI * 1.5d, Color.Red),    //west            
-            new WindColorMap(2d * Math.PI, Color.Green),    //north
-            new WindColorMap(2.5d * Math.PI, Color.Blue)    //east
+            new WindColor(Math.PI * -0.5d, Color.Red),    //west   
+            new WindColor(0, Color.Green),               //north
+            new WindColor(Math.PI * 0.5d, Color.Blue),   //east    
+            new WindColor(Math.PI, Color.Yellow),        //south
+            new WindColor(Math.PI * 1.5d, Color.Red),    //west            
+            new WindColor(2d * Math.PI, Color.Green),    //north
+            new WindColor(2.5d * Math.PI, Color.Blue)    //east
         };        
         
         //get the base wind direction on the passed tile

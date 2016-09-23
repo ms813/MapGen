@@ -39,6 +39,7 @@ namespace ReSource
         public double Moisture { get; set; }
         public WaterType Water { get; set; }
         public bool Coast = false;
+        public double RainShadow { get; set; }
 
         //temperature
         public double Temperature { get; set; }
@@ -165,6 +166,22 @@ namespace ReSource
 
             DisplayColour = c;
         }
+
+        public void SetRainShadowColor()
+        {
+            if(Water == WaterType.Ocean)
+            {
+                double interpolate = MathHelper.Scale(0, ParentMap.SeaLevel, 0, 255, Elevation);
+                byte b = (byte)Math.Floor(interpolate - 255d);
+                DisplayColour = new Color(0, 0, b, 255);
+            }
+            else
+            {
+                byte i = (byte)MathHelper.Scale(0, 1, 0, 255, RainShadow);
+                DisplayColour = new Color(i, i, i, 255);
+            }         
+        }
+
         public void Update(float dt)
         {
 
