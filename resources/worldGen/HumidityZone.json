@@ -3,26 +3,32 @@
 [
 	{ 
 		"name" : "Arid",
+		"type" : "humidity",
 		"zone"	: 0
 	},
 	{
 		"name" : "Dry",
+		"type" : "humidity",
 		"zone"	: 1
 	},
 	{
 		"name" : "Moderate",
+		"type" : "humidity",
 		"zone"	: 2
 	},
 	{
 		"name" : "Damp",
+		"type" : "humidity",
 		"zone"	: 3
 	},
 	{
 		"name" : "Rainy",
+		"type" : "humidity",
 		"zone"	: 4
 	},
 	{
 		"name" : "Monsoon",
+		"type" : "humidity",
 		"zone"	: 5
 	}
 ]

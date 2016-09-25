@@ -22,9 +22,9 @@ namespace ReSource
         public int TileSize { get; private set; }
         public int LandmassId = -1;
 
-        public int HumidityZone;
-        public int TemperatureZone;
-        public int ElevationZone;
+        public ClimateZone HumidityZone;
+        public ClimateZone TemperatureZone;
+        public ClimateZone ElevationZone;
 
         //Elevation
         public double Elevation { get; set; }
