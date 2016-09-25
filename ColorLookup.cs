@@ -1,14 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
+﻿using System.Collections.Generic;
 using SFML.Graphics;
 
 namespace ReSource
 {
-    class ColorLookup
+    class ColorLookup : List<Color>
     {
         public static readonly List<Color> Color = new List<Color>
         {

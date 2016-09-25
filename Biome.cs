@@ -9,7 +9,7 @@ using SFML.Graphics;
 namespace ReSource
 {
     class Biome
-    {
+    {       
         public static readonly Biome Snow = new Biome("Snow", Color.White);                                     //white
         public static readonly Biome Tundra = new Biome("Tundra", new Color(128, 255, 255, 255));                    //pale cyan
         public static readonly Biome Bare = new Biome("Bare", new Color(218, 218, 218, 255));                   //grey

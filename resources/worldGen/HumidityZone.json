@@ -1,0 +1,28 @@
+//humidity zones
+
+[
+	{ 
+		"name" : "Arid",
+		"zone"	: 0
+	},
+	{
+		"name" : "Dry",
+		"zone"	: 1
+	},
+	{
+		"name" : "Moderate",
+		"zone"	: 2
+	},
+	{
+		"name" : "Damp",
+		"zone"	: 3
+	},
+	{
+		"name" : "Rainy",
+		"zone"	: 4
+	},
+	{
+		"name" : "Monsoon",
+		"zone"	: 5
+	}
+]

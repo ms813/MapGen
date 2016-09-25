@@ -22,7 +22,7 @@ namespace ReSource
 
         private ActionState actionState = ActionState.NONE;
         private float ZoomLevel = 1f;        
-        private int mapY = 128;
+        private int mapY = 256;
         private float MaxZoom;
 
         public TestState(RenderWindow window)
@@ -74,7 +74,7 @@ namespace ReSource
                 if(actionState != ActionState.PANNING)
                 {
                     panningAnchor = Mouse.GetPosition((RenderWindow)sender);
-                    actionState = ActionState.PANNING;
+                    actionState = ActionState.PANNING;                    
                 }                
             }
         }

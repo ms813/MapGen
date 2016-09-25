@@ -9,7 +9,7 @@ namespace ReSource
     class PerlinGenerator
     {
         //fixed lookup table for debug purposes
-        private static int[] permutation = {151,160,137,91,90,15, 131,13,201,95,96,53,194,233,7,225,140,36,103,30,69,142,8,99,37,240,21,10,23,
+        private int[] fixedLookupTable = {151,160,137,91,90,15, 131,13,201,95,96,53,194,233,7,225,140,36,103,30,69,142,8,99,37,240,21,10,23,
             190, 6,148,247,120,234,75,0,26,197,62,94,252,219,203,117,35,11,32,57,177,33,
             88,237,149,56,87,174,20,125,136,171,168, 68,175,74,165,71,134,139,48,27,166,
             77,146,158,231,83,111,229,122,60,211,133,230,220,105,92,41,55,46,245,40,244,
@@ -23,25 +23,19 @@ namespace ReSource
             138,236,205,93,222,114,67,29,24,72,243,141,128,195,78,66,215,61,156,180};
 
         //randomised lookup table generated dynamically
-        private static int[] lookupTable;
+        private int[] lookupTable;
 
-        private static int repeat = -1;
+        private int repeat = -1;
 
-        public static readonly int cap = 256;
+        public readonly int cap = 256;
         
-        static PerlinGenerator()
-        {         
-            Randomise(cap);
-        }
-
-        public static void Randomise(int randomSeed = -1)
-        {            
-            //default randomseed == -1 is caught in the InitialiseLookupTable function
-            //indicating a new random seed is generated
+        public PerlinGenerator(int randomSeed = -1)
+        {
+            //if randomSeed == -1, a random number is used to seed the lookup array
             lookupTable = InitialiseLookupTable(cap, randomSeed);
-        }
+        }      
 
-        public static double Perlin(double x, double y)
+        public double Perlin(double x, double y)
         {
             if(repeat > 0)
             {
@@ -75,7 +69,7 @@ namespace ReSource
             return (MathHelper.Lerp(x1, x2, v) + 1) / 2;   
         }
 
-        public static double OctavePerlin(double x, double y, int octaves, double persistence)
+        public double OctavePerlin(double x, double y, int octaves, double persistence)
         {
             double total = 0;
             double frequency = 1;
@@ -94,14 +88,14 @@ namespace ReSource
             return total / maxValue;
         }        
 
-        private static int inc(int num)
+        private int inc(int num)
         {
             num++;
             if (repeat > 0) num %= repeat;
             return num;
         }             
 
-        private static double Grad(int hash, double x, double y)
+        private double Grad(int hash, double x, double y)
         {
             switch (hash & 0xF)
             {
@@ -125,7 +119,7 @@ namespace ReSource
             }
         }
 
-        private static int[] InitialiseLookupTable(int cap, int randomSeed = -1)
+        private int[] InitialiseLookupTable(int cap, int randomSeed = -1)
         {
             List<int> numbers = new List<int>();            
 
@@ -134,6 +128,8 @@ namespace ReSource
                 numbers.Add(i);
             }
 
+            //if the random seed == -1 (i.e. the default), 
+            //create a random number generator with a random seed
             Random rnd;
             if(randomSeed == -1)
             {

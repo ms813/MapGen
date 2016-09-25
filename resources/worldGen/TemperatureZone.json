@@ -1,0 +1,28 @@
+//temperature zones
+
+[
+	{ 
+		"name" : "Freezing",
+		"zone"	: 0
+	},
+	{
+		"name" : "Cold",
+		"zone"	: 1
+	},
+	{
+		"name" : "Temperate",
+		"zone"	: 2
+	},
+	{
+		"name" : "Warm",
+		"zone"	: 3
+	},
+	{
+		"name" : "Hot",
+		"zone"	: 4
+	},
+	{
+		"name" : "Scorching",
+		"zone"	: 5
+	}
+]

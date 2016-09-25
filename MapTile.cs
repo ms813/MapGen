@@ -22,6 +22,10 @@ namespace ReSource
         public int TileSize { get; private set; }
         public int LandmassId = -1;
 
+        public int HumidityZone;
+        public int TemperatureZone;
+        public int ElevationZone;
+
         //Elevation
         public double Elevation { get; set; }
         //elevation noise coefficients
@@ -40,6 +44,7 @@ namespace ReSource
         public WaterType Water { get; set; }
         public bool Coast = false;
         public double RainShadow { get; set; }
+        public double Rainfall { get; set; }              
 
         //temperature
         public double Temperature { get; set; }
@@ -180,6 +185,32 @@ namespace ReSource
                 byte i = (byte)MathHelper.Scale(0, 1, 0, 255, RainShadow);
                 DisplayColour = new Color(i, i, i, 255);
             }         
+        }
+
+        public void SetRainfallColor()
+        {
+            Color c = new Color();
+            c.A = 255;
+            double interpolate = MathHelper.Scale(0, 1, 0, 255, Rainfall);
+            c.R = (byte)(255 - interpolate);
+            c.B = (byte)(interpolate);
+
+            DisplayColour = c;
+        }
+
+        public void SetElevationZoneColor()
+        {        
+            
+        }
+
+        public void SetTemperatureZoneColor()
+        {
+           
+        }
+
+        public void SetHumidityZoneColor()
+        {
+            
         }
 
         public void Update(float dt)
