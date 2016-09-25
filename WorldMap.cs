@@ -26,11 +26,11 @@ namespace ReSource
 
         //public static Font Font = new Font(@"..\..\..\resources\fonts\arial.ttf");
 
-        public int TileSize = 32;        
+        public int TileSize = 32;
 
-        public readonly float MaxElevation = 1.0f;
-        public readonly float MinElevation = 0.0f;
-        public readonly float SeaLevel = 0.2f;
+        public readonly double MaxElevation = 1.0d;
+        public readonly double MinElevation = 0.0d;
+        public readonly double SeaLevel = 0.2d;
         public readonly double mountainThreshold = 0.45d;       //cutoff height for a tile to be considered a mountain
 
         public Vector2i MapSize { get; private set; }        
@@ -50,6 +50,7 @@ namespace ReSource
             ExecuteTimedFunction(AssignOcean);
             ExecuteTimedFunction(AssignLandMasses);
             ExecuteTimedFunction(AssignCoast);
+            ExecuteTimedFunction(AssignElevationZones);
             ExecuteTimedFunction(AssignDownslopes);
             ExecuteTimedFunction(GenerateWindDirection);
             ExecuteTimedFunction(CalculateWindSpeed);
@@ -279,18 +280,19 @@ namespace ReSource
             };
             timer.Interval = 1000;
             timer.Enabled = true;
-
+            
             Parallel.ForEach(Tiles.Values, (t) =>
             {
                 SetTileVoronoi(t);
                 voronoiCount++;      
-            });
+            });          
+
             Console.SetCursorPosition(System.Reflection.MethodBase.GetCurrentMethod().Name.Length, Console.CursorTop);
             timer.Dispose();
 
             NormaliseVoronoiCoefficients();
         }
-
+        
         private void SetTileVoronoi(MapTile tile)
         {
             //find distance to nearest random walk line         
@@ -309,7 +311,7 @@ namespace ReSource
                 }
             }
             tile.Voronoi = min;
-        }
+        }       
 
         private void NormaliseVoronoiCoefficients()
         {
@@ -341,13 +343,10 @@ namespace ReSource
 
             foreach (MapTile t in Tiles.Values)
             {
-                t.Elevation = MathHelper.Scale(min, max, MinElevation, MaxElevation, t.Elevation);
-
-                //set elevation zone here
-                //t.ElevationZone = GetElevationZone(t);
+                t.Elevation = MathHelper.Scale(min, max, MinElevation, MaxElevation, t.Elevation);               
             }
-        }        
-
+        }      
+        
         private void AssignOcean()
         {            
             Queue<MapTile> fillQ = new Queue<MapTile>();
@@ -466,6 +465,44 @@ namespace ReSource
                 }
             }
         }    
+
+        private void AssignElevationZones()
+        {
+            foreach(MapTile t in Tiles.Values)
+            {
+                t.ElevationZone = GetElevationZone(t);
+            }
+        }
+
+        private ClimateZone GetElevationZone(MapTile t)
+        {
+            //need to check if ocean first
+            //land zones are then divided by the above sea level zones
+            if (t.Water == WaterType.Ocean)
+            {
+                //return one of the three ocean zones
+                if (t.Elevation < 0.25 * SeaLevel)
+                {
+                    //bottom of the ocean, return depths zone
+                    return ClimateZone.GetElevationZone(0);
+                }
+                else if (t.Elevation > 0.75 * SeaLevel)
+                {
+                    //returns shallows zone
+                    return ClimateZone.GetElevationZone(2);
+                }
+                else
+                {
+                    //returns oceans zone
+                    return ClimateZone.GetElevationZone(1);
+                }
+            }
+            else
+            {
+                double e = MathHelper.Scale(SeaLevel, MaxElevation, 3, ClimateZone.ElevationZones.Count() - 0.001f, t.Elevation);
+                return ClimateZone.GetElevationZone((int)Math.Floor(e));
+            }
+        }
      
         private void AssignDownslopes()
         {
@@ -581,7 +618,7 @@ namespace ReSource
             Console.WriteLine();
             for(int i = 0; i < LandMasses.Count; i++) { 
                 Console.SetCursorPosition(0, Console.CursorTop);
-                Console.Write("\tCalculating distance to coast for landmass {0} of {1}", i + 1, LandMasses.Count);
+                Console.Write("  Calculating distance to coast for landmass {0} of {1}", i + 1, LandMasses.Count);
 
                 //get a list of the coast tiles in each landmass
                 List<MapTile> coastTiles = LandMasses[i].GetCoastTiles();
@@ -648,20 +685,30 @@ namespace ReSource
             {
                 double fractionalLatitude = (double)t.GlobalIndex.Y / MapSize.Y;
                 double tBase;
+                double gaussianWidth = 2;
                 if(fractionalLatitude < 0.5)
                 {
                     //tile is in the northern hemisphere
 
                     //assign temperature of 0 at the top, 1 at the equator
+                    
+                    //smoothstep
+                    //tBase = MathHelper.SmoothStep(2 * fractionalLatitude);
+                    
+                    //linear
                     tBase = 2 * fractionalLatitude;
-
                 }
                 else
                 {
                     //tile is in the southern hemisphere
 
                     //assign temperature of 1 in the middle, 0 at the bottom
-                    tBase = 2 * (1 - fractionalLatitude);
+                    
+                    //smoothstep
+                    //tBase = MathHelper.SmoothStep(2 * (1 - fractionalLatitude));
+                    
+                    //linear
+                    tBase = 2 * (1 - fractionalLatitude);                           
                 }
 
                 int featureScale = MapSize.Y / 8;
@@ -677,22 +724,26 @@ namespace ReSource
                 {
                     double fractionalEle = MathHelper.Scale(mountainThreshold, MaxElevation, 0, 1, t.Elevation);
                     t.Temperature *= (1 - fractionalEle);
-                }                
-
-                //reduce sea temperatures
-                if(t.Water == WaterType.Ocean)
-                {
-                    t.Temperature *= oceanTempScaleFactor;
-                }
+                }                              
             }
 
             //normalise temperature to between 0 and 1
+            //and set temperature zone
             double min = Tiles.Values.Min(t => t.Temperature);
             double max = Tiles.Values.Max(t => t.Temperature);
             foreach(MapTile t in Tiles.Values)
             {
-                t.Temperature = MathHelper.Scale(min, max, 0, 1, t.Temperature);      
-                //set temperatureZone here
+                t.Temperature = MathHelper.Scale(min, max, 0, 1, t.Temperature);
+
+                //reduce sea temperatures after finding min so as not to skew cold areas
+                if (t.Water == WaterType.Ocean)
+                {
+                    //t.Temperature *= oceanTempScaleFactor;
+                }
+
+                int z = (int)Math.Floor(ClimateZone.TemperatureZones.Count() * t.Temperature);
+                if (z == ClimateZone.TemperatureZones.Count()) z--;
+                t.TemperatureZone = ClimateZone.TemperatureZones[z];
             }        
         }
         
@@ -760,7 +811,7 @@ namespace ReSource
                 List<MapTile> tilePath = new List<MapTile>();
 
                 MapTile currentTile = t;
-                while(currentTile.Water != WaterType.Ocean)
+                while(currentTile != null && currentTile.Water != WaterType.Ocean)
                 {
                     //get the principal direction opposite to which the wind is flowing
                     //(note the negative sign)
@@ -812,7 +863,7 @@ namespace ReSource
                 t.Rainfall = perlin.OctavePerlin(
                     t.GlobalIndex.X / featureScale,
                     t.GlobalIndex.Y / featureScale,
-                    3, 0.5);                
+                    5, 0.5);                
             }
 
             //normalise the noise, then scale by the rainshadow
@@ -824,6 +875,9 @@ namespace ReSource
                 t.Rainfall = MathHelper.Scale(min, max, 0, 1, t.Rainfall);
                 t.Rainfall *= (1 - t.RainShadow);
                 //set humidityZone here
+                int z = (int)Math.Floor(ClimateZone.HumidityZones.Count() * t.Rainfall);
+                if (z == ClimateZone.HumidityZones.Count()) z--;
+                t.HumidityZone = ClimateZone.HumidityZones[z];
             }            
         }
    
@@ -1127,7 +1181,11 @@ namespace ReSource
             {              
                 Console.WriteLine("Clicked tileIndex: ({0}, {1}), z = {2}, water = {3}", x, y, Math.Round(t.Elevation, 2), t.Water);
                 Console.WriteLine("WorldPos: ({0},{1}), LandmassID: {2}", index.X, index.Y, t.LandmassId);
-                Console.WriteLine("Temperature: {0}, rainfall: {1}", Math.Round(t.Temperature,2), Math.Round(t.Rainfall, 2));
+                Console.WriteLine("Temperature: {0}, rainfall: {1}", Math.Round(t.Temperature, 2), Math.Round(t.Rainfall, 2));
+                Console.WriteLine("ElevationZone: {0}", t.ElevationZone.Name);
+                Console.WriteLine("TemperatureZone: {0}", t.TemperatureZone.Name);
+                Console.WriteLine("HumidityZone: {0}", t.HumidityZone.Name);                
+
                 //Console.WriteLine("Wind dir: {0}, str: {1}, distToCoast: {2}", Math.Round(t.WindDirection, 3), Math.Round(t.WindStrength, 3), t.DistanceToCoast);
                 //Console.WriteLine("DownslopeDir: ({0},{1}), Downhill to sea:{2}", t.DownslopeDir.X, t.DownslopeDir.Y, t.DownhillToSea);
                 //Console.WriteLine("River volume: {0}. River source: {1}", t.RiverVolume, t.RiverSource);

@@ -199,18 +199,39 @@ namespace ReSource
         }
 
         public void SetElevationZoneColor()
-        {        
-            
+        {            
+            if(Coast)
+            {
+                DisplayColour = Color.Black;
+            }
+            else
+            {
+                DisplayColour = ElevationZone.Color;       
+            }
         }
 
         public void SetTemperatureZoneColor()
         {
-           
+            if (Coast)
+            {
+                DisplayColour = Color.Black;
+            }
+            else
+            {
+                DisplayColour = TemperatureZone.Color;
+            }
         }
 
         public void SetHumidityZoneColor()
         {
-            
+            if (Coast)
+            {
+                DisplayColour = Color.Black;
+            }
+            else
+            {
+                DisplayColour = HumidityZone.Color;
+            }
         }
 
         public void Update(float dt)

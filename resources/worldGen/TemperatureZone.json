@@ -3,26 +3,68 @@
 [
 	{ 
 		"name" : "Freezing",
-		"zone"	: 0
+		"type" : "temperature",
+		"zone" : 0,		
+		"color" : {
+			"r" : 0,
+			"g" : 0,
+			"b" : 255,
+			"a" : 255
+		}
 	},
 	{
 		"name" : "Cold",
-		"zone"	: 1
+		"type" : "temperature",
+		"zone" : 1,
+		"color" : {
+			"r" : 0,
+			"g" : 255,
+			"b" : 255,
+			"a" : 255
+		}
 	},
 	{
 		"name" : "Temperate",
-		"zone"	: 2
+		"type" : "temperature",
+		"zone" : 2,
+		"color" : {
+			"r" : 0,
+			"g" : 255,
+			"b" : 0,
+			"a" : 255
+		}
 	},
 	{
 		"name" : "Warm",
-		"zone"	: 3
+		"type" : "temperature",
+		"zone" : 3,
+		"color" : {
+			"r" : 255,
+			"g" : 255,
+			"b" : 0,
+			"a" : 255
+		}
 	},
 	{
 		"name" : "Hot",
-		"zone"	: 4
+		"type" : "temperature",
+		"zone" : 4,
+		"color" : {
+			"r" : 255,
+			"g" : 128,
+			"b" : 0,
+			"a" : 255
+		}
 	},
 	{
 		"name" : "Scorching",
-		"zone"	: 5
+		"type" : "temperature",
+		"zone" : 5,
+		"color" : {
+			"r" : 255,
+			"g" : 0,
+			"b" : 0,
+			"a" : 255
+		}
 	}
 ]

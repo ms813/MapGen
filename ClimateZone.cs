@@ -19,8 +19,24 @@ namespace ReSource
         [JsonProperty("zone")]
         public int Zone;
 
+        [JsonProperty("color")]
+        public SFML.Graphics.Color Color;
+
         public static List<ClimateZone> ElevationZones = new JsonReader(@"..\..\..\resources\worldGen\ElevationZone.json").ReadJson<ClimateZone>();
         public static List<ClimateZone> TemperatureZones = new JsonReader(@"..\..\..\resources\worldGen\TemperatureZone.json").ReadJson<ClimateZone>();
         public static List<ClimateZone> HumidityZones = new JsonReader(@"..\..\..\resources\worldGen\HumidityZone.json").ReadJson<ClimateZone>();
+
+        public static ClimateZone GetElevationZone(int i)
+        {
+            foreach(ClimateZone z in ElevationZones)
+            {
+                if(z.Zone == i)
+                {
+                    return z;
+                }
+            }
+
+            throw new IndexOutOfRangeException("Elevation zone " + i + " does not exist!");
+        }
     }          
 }

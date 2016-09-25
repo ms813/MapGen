@@ -27,8 +27,7 @@ namespace ReSource
         }
 
         public List<T> ReadJson<T>()
-        {           
-
+        {         
             return JsonConvert.DeserializeObject<List<T>>(ReadAllText());
         }
     }

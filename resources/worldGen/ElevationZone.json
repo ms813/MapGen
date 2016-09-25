@@ -1,36 +1,80 @@
 //elevation zones
-
 [
-{
-	"name" : "Depths",
-	"zone"	: 0
-},
-{
-	"name" : "Ocean",
-	"zone"	: 1
-},
-{
-	"name" : "Shallows",
-	"zone"	: 2
-},
-{
-	"name" : "Coastal",
-	"zone"	: 3
-},
-{
-	"name" : "Lowland",
-	"zone"	: 4
-},
-{
-	"name" : "Hill",
-	"zone"	: 5
-},
-{
-	"name" : "Mountain",
-	"zone"	: 6
-},
-{
-	"name" : "Peak",
-	"zone"	: 7
-}
+	{
+		"name" : "Depths",
+		"type" : "elevation",
+		"zone" : 0,		
+		"color" : {
+			"r" : 0,
+			"g" : 0,
+			"b" : 0,
+			"a" : 255
+		}
+	},
+	{
+		"name" : "Ocean",
+		"type" : "elevation",
+		"zone" : 1,		
+		"color" : {
+			"r" : 0,
+			"g" : 0,
+			"b" : 255,
+			"a" : 255
+		}
+	},
+	{
+		"name" : "Shallows",
+		"type" : "elevation",
+		"zone"	: 2,		
+		"color" : {
+			"r" : 0,
+			"g" : 255,
+			"b" : 255,
+			"a" : 255
+		}
+	},	
+	{
+		"name" : "Lowland",
+		"type" : "elevation",
+		"zone" : 3,		
+		"color" : {
+			"r" : 0,
+			"g" : 255,
+			"b" : 0,
+			"a" : 255
+		}
+	},
+	{
+		"name" : "Hill",
+		"type" : "elevation",
+		"zone" : 4,
+		"color" : {
+			"r" : 255,
+			"g" : 128,
+			"b" : 0,
+			"a" : 255
+		}
+	},
+	{
+		"name" : "Mountain",
+		"type" : "elevation",
+		"zone" : 5,
+		"color" : {
+			"r" : 218,
+			"g" : 218,
+			"b" : 218,
+			"a" : 255
+		}
+	},
+	{
+		"name" : "Peak",
+		"type" : "elevation",
+		"zone" : 6,
+		"color" : {
+			"r" : 255,
+			"g" : 255,
+			"b" : 255,
+			"a" : 255
+		}
+	}
 ]
