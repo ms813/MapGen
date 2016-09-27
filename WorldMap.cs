@@ -717,14 +717,7 @@ namespace ReSource
                     (double)t.GlobalIndex.Y / featureScale,
                     5, 0.5);
 
-                t.Temperature = tBase + (temperatureDisortionFactor * tNoise);
-
-                //make high elevation areas colder
-                if(t.Elevation > mountainThreshold)
-                {
-                    double fractionalEle = MathHelper.Scale(mountainThreshold, MaxElevation, 0, 1, t.Elevation);
-                    t.Temperature *= (1 - fractionalEle);
-                }                              
+                t.Temperature = tBase + (temperatureDisortionFactor * tNoise);                                            
             }
 
             //normalise temperature to between 0 and 1
@@ -740,6 +733,14 @@ namespace ReSource
                 {
                     //t.Temperature *= oceanTempScaleFactor;
                 }
+
+                //make high elevation areas colder after finding min so mountains don't skew the 
+                //polar temperatures higher
+                if (t.Elevation > mountainThreshold)
+                {
+                    double fractionalEle = MathHelper.Scale(mountainThreshold, MaxElevation, 0, 1, t.Elevation);
+                    t.Temperature *= (1 - fractionalEle);
+                }  
 
                 int z = (int)Math.Floor(ClimateZone.TemperatureZones.Count() * t.Temperature);
                 if (z == ClimateZone.TemperatureZones.Count()) z--;
