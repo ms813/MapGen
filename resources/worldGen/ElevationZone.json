@@ -1,7 +1,7 @@
 //elevation zones
 [
 	{
-		"name" : "Depths",
+		"name" : "depths",
 		"type" : "elevation",
 		"zone" : 0,		
 		"color" : {
@@ -12,7 +12,7 @@
 		}
 	},
 	{
-		"name" : "Ocean",
+		"name" : "ocean",
 		"type" : "elevation",
 		"zone" : 1,		
 		"color" : {
@@ -23,7 +23,7 @@
 		}
 	},
 	{
-		"name" : "Shallows",
+		"name" : "shallows",
 		"type" : "elevation",
 		"zone"	: 2,		
 		"color" : {
@@ -34,7 +34,7 @@
 		}
 	},	
 	{
-		"name" : "Lowland",
+		"name" : "lowland",
 		"type" : "elevation",
 		"zone" : 3,		
 		"color" : {
@@ -45,7 +45,7 @@
 		}
 	},
 	{
-		"name" : "Hill",
+		"name" : "hill",
 		"type" : "elevation",
 		"zone" : 4,
 		"color" : {
@@ -56,7 +56,7 @@
 		}
 	},
 	{
-		"name" : "Mountain",
+		"name" : "mountain",
 		"type" : "elevation",
 		"zone" : 5,
 		"color" : {
@@ -67,7 +67,7 @@
 		}
 	},
 	{
-		"name" : "Peak",
+		"name" : "peak",
 		"type" : "elevation",
 		"zone" : 6,
 		"color" : {

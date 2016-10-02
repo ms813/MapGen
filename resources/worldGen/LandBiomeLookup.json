@@ -1,0 +1,12 @@
+{
+	"temperatureZones" 	:	["freezing", 	"cold", 	"temperate",	"warm", 		"hot",		"scorching"],
+	"humidityZones"		:	["flooded", 	"wet",		"damp",			"moderate",		"dry",		"arid"	],
+	"biomes"				:	[
+								["snow", 	"snow", 		"swamp", 			"swamp", 			"tropicalRainforest", 	"tropicalRainforest"],
+								["snow", 	"taiga", 		"temperateForest", 	"temperateForest", 	"tropicalRainforest", 	"tropicalRainforest"],
+								["snow", 	"taiga", 		"temperateForest", 	"grassland", 		"savanna", 				"savanna"],
+								["tundra", 	"taiga", 		"grassland", 		"grassland", 		"savanna", 				"hotDesert"],
+								["tundra", 	"coldDesert", 	"grassland", 		"badlands",			"hotDesert", 			"hotDesert"],
+								["tundra", 	"coldDesert", 	"coldDesert",		"badlands",			"hotDesert", 			"scorched"],
+							]
+}

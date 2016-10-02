@@ -41,7 +41,7 @@ namespace ReSource
             
             ExecuteTimedFunction(CreateTiles);
             ExecuteTimedFunction(AssignTileNeighbours);
-            ExecuteTimedFunction(() => GenerateRandomWalks(true, true, 8,8,5), "Generate Random Walks");
+            ExecuteTimedFunction(() => GenerateRandomWalks(true, false, 8,8,5), "Generate Random Walks");
             ExecuteTimedFunction(CalculatePerlinCoefficients);
             ExecuteTimedFunction(CalculateGaussianCoefficients);
             ExecuteTimedFunction(CalculateVoronoiCoefficients);
@@ -59,7 +59,7 @@ namespace ReSource
             ExecuteTimedFunction(CalculateRainShadow);
             ExecuteTimedFunction(AssignRainfall);
             //ExecuteTimedFunction(AssignMoisture);
-            //ExecuteTimedFunction(AssignBiomes);
+            ExecuteTimedFunction(AssignBiomes);
             ExecuteTimedFunction(InitialiseDisplay);
             ExecuteTimedFunction(CreateVertexArray);
              
@@ -880,104 +880,27 @@ namespace ReSource
                 if (z == ClimateZone.HumidityZones.Count()) z--;
                 t.HumidityZone = ClimateZone.HumidityZones[z];
             }            
-        }
-   
-        private void AssignMoisture()
-        {
-            //grab a list of only the water & tiles on the map
-            //to speed up the moisture assignment OCEAN tiles are not assigned moisture
-            IEnumerable<MapTile> waterTiles = Tiles.Values.Where(t => t.RiverVolume > 0 || t.Water == WaterType.Lake);
-            IEnumerable<MapTile> landTiles = Tiles.Values.Where(t => t.Water != WaterType.Ocean);
-            
-            int moistureCount = 0;
-
-            System.Timers.Timer timer = new System.Timers.Timer();
-            decimal percent = 0;
-            timer.Elapsed += (sender, e) =>
-            {
-                percent = Math.Round((decimal)moistureCount / landTiles.Count() * 100m, 2);
-                Console.SetCursorPosition(System.Reflection.MethodBase.GetCurrentMethod().Name.Length, Console.CursorTop);
-                Console.Write("{0}%", percent);
-            };
-            timer.Interval = 1000;
-            timer.Enabled = true;
-            
-            Parallel.ForEach(landTiles, (t) =>
-            {
-                AssignTileMoisture(t, waterTiles);
-                moistureCount++;
-            });
-            Console.SetCursorPosition(System.Reflection.MethodBase.GetCurrentMethod().Name.Length, Console.CursorTop);
-            timer.Dispose();
-        }
-
-        double moistureConst = 0.95d;
-        private void AssignTileMoisture(MapTile tile, IEnumerable<MapTile> waterTiles)
-        {
-            double minFreshWaterDist = Double.MaxValue;
-            foreach(MapTile waterTile in waterTiles)
-            {
-                Vector2i dir = waterTile.GlobalIndex - tile.GlobalIndex;
-                int freshWaterDist = Math.Abs(dir.X) + Math.Abs(dir.Y);
-
-                if(freshWaterDist < minFreshWaterDist)
-                {
-                    minFreshWaterDist = freshWaterDist;
-                }
-            }
-            tile.Moisture = Math.Pow(moistureConst, minFreshWaterDist);
-            if (tile.Moisture > 1) Console.WriteLine("moisture > 1");
-        }
+        }  
 
         private void AssignBiomes()
         {
-            Parallel.ForEach(Tiles.Values, t => AssignTileBiome(t));
-            Console.WriteLine();
-            foreach(Biome b in Biome.biomeList)
+            Dictionary<string, int> count = new Dictionary<string, int>();
+            foreach(string b in Biome.Biomes.Keys)
             {
-                Console.WriteLine("{0}, count: {1}", b.Name, b.Count);
-            }
-            
-        }
-
-        private void AssignTileBiome(MapTile t)
-        {
-            if(t.Water == WaterType.Ocean)
-            {
-                if(t.Elevation > SeaLevel * 0.75d)
-                {
-                    t.Biome = Biome.Shallows;                    
-                }
-                else if (t.Elevation < SeaLevel * 0.25d)
-                {
-                    t.Biome = Biome.Depths;                    
-                }
-                else
-                {
-                    t.Biome = Biome.Ocean;                    
-                }
-            } 
-            else if(t.Water == WaterType.Lake)
-            {
-                if(t.Elevation > mountainThreshold)
-                {
-                    t.Biome = Biome.AlpineLake;
-                }
-                else
-                {
-                    t.Biome = Biome.Lake;
-                }               
-            }
-            else
-            {
-                int moistureZone = (int)Math.Floor(MathHelper.Scale(0, 1, 0, 5.999, t.Moisture));
-                int eleZone = (int)Math.Floor(MathHelper.Scale(SeaLevel, 1, 0, 3.999, t.Elevation));                
-
-                t.Biome = Biome.BiomeTable[moistureZone, eleZone];                
+                count.Add(b, 0);
             }
 
-            t.Biome.Count++;
-        }
+            foreach(MapTile t in Tiles.Values)
+            {
+                t.Biome = Biome.GetBiome(t);
+                count[t.Biome.Name]++;
+            }      
+    
+            foreach(KeyValuePair<string, int> pair in count)
+            {
+                Console.WriteLine("Biome: {0}, count: {1}", pair.Key, pair.Value);
+            }
+        }        
 
         private void InitialiseDisplay()
         {
@@ -1185,7 +1108,8 @@ namespace ReSource
                 Console.WriteLine("Temperature: {0}, rainfall: {1}", Math.Round(t.Temperature, 2), Math.Round(t.Rainfall, 2));
                 Console.WriteLine("ElevationZone: {0}", t.ElevationZone.Name);
                 Console.WriteLine("TemperatureZone: {0}", t.TemperatureZone.Name);
-                Console.WriteLine("HumidityZone: {0}", t.HumidityZone.Name);                
+                Console.WriteLine("HumidityZone: {0}", t.HumidityZone.Name);
+                Console.WriteLine("Biome: {0}", t.Biome.Name); 
 
                 //Console.WriteLine("Wind dir: {0}, str: {1}, distToCoast: {2}", Math.Round(t.WindDirection, 3), Math.Round(t.WindStrength, 3), t.DistanceToCoast);
                 //Console.WriteLine("DownslopeDir: ({0},{1}), Downhill to sea:{2}", t.DownslopeDir.X, t.DownslopeDir.Y, t.DownhillToSea);

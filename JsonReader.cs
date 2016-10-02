@@ -21,12 +21,12 @@ namespace ReSource
             return System.IO.File.ReadAllText(filePath);
         }
 
-        public dynamic ReadJson()
+        public T ReadJson<T>()
         {
-            return JsonConvert.DeserializeObject(ReadAllText());
+            return JsonConvert.DeserializeObject<T>(ReadAllText());
         }
 
-        public List<T> ReadJson<T>()
+        public List<T> ReadJsonArray<T>()
         {         
             return JsonConvert.DeserializeObject<List<T>>(ReadAllText());
         }

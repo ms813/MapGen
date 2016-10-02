@@ -132,7 +132,14 @@ namespace ReSource
 
         public void SetBiomeColor()
         {
-            DisplayColour = Biome.Color;
+            if (Coast)
+            {
+                DisplayColour = Color.Black;
+            }
+            else
+            {
+                DisplayColour = Biome.Color;
+            }
         }
 
         public void SetWindColor()

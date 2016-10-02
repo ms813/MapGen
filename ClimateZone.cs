@@ -22,9 +22,45 @@ namespace ReSource
         [JsonProperty("color")]
         public SFML.Graphics.Color Color;
 
-        public static List<ClimateZone> ElevationZones = new JsonReader(@"..\..\..\resources\worldGen\ElevationZone.json").ReadJson<ClimateZone>();
-        public static List<ClimateZone> TemperatureZones = new JsonReader(@"..\..\..\resources\worldGen\TemperatureZone.json").ReadJson<ClimateZone>();
-        public static List<ClimateZone> HumidityZones = new JsonReader(@"..\..\..\resources\worldGen\HumidityZone.json").ReadJson<ClimateZone>();
+        public static List<ClimateZone> ElevationZones { get; private set; }
+        public static List<ClimateZone> TemperatureZones { get; private set; }
+        public static List<ClimateZone> HumidityZones { get; private set; }
+
+        static ClimateZone()
+        {
+            ElevationZones = new JsonReader(@"..\..\..\resources\worldGen\ElevationZone.json").ReadJsonArray<ClimateZone>();
+            TemperatureZones = new JsonReader(@"..\..\..\resources\worldGen\TemperatureZone.json").ReadJsonArray<ClimateZone>();
+            HumidityZones = new JsonReader(@"..\..\..\resources\worldGen\HumidityZone.json").ReadJsonArray<ClimateZone>();
+        }
+
+        public static ClimateZone GetTemperatureZone(String name)
+        {
+            foreach(ClimateZone z in TemperatureZones)
+            {
+                if(z.Name == name) return z;                    
+            }
+            throw new Exception("Temperature zone with name : " + name + " does not exist!");
+        }
+
+        public static ClimateZone GetElevationZone(String name)
+        {
+            foreach (ClimateZone z in ElevationZones)
+            {
+                if (z.Name == name) return z;
+            }
+            throw new Exception("Elevation zone with name : " + name + " does not exist!");
+        }
+
+
+        public static ClimateZone GetHumidityZone(String name)
+        {
+            foreach (ClimateZone z in HumidityZones)
+            {
+                if (z.Name == name) return z;
+            }
+            throw new Exception("Humidity zone with name : " + name + " does not exist!");
+        }
+
 
         public static ClimateZone GetElevationZone(int i)
         {

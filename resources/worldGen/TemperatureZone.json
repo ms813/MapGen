@@ -2,7 +2,7 @@
 
 [
 	{ 
-		"name" : "Freezing",
+		"name" : "freezing",
 		"type" : "temperature",
 		"zone" : 0,		
 		"color" : {
@@ -13,7 +13,7 @@
 		}
 	},
 	{
-		"name" : "Cold",
+		"name" : "cold",
 		"type" : "temperature",
 		"zone" : 1,
 		"color" : {
@@ -24,7 +24,7 @@
 		}
 	},
 	{
-		"name" : "Temperate",
+		"name" : "temperate",
 		"type" : "temperature",
 		"zone" : 2,
 		"color" : {
@@ -35,7 +35,7 @@
 		}
 	},
 	{
-		"name" : "Warm",
+		"name" : "warm",
 		"type" : "temperature",
 		"zone" : 3,
 		"color" : {
@@ -46,7 +46,7 @@
 		}
 	},
 	{
-		"name" : "Hot",
+		"name" : "hot",
 		"type" : "temperature",
 		"zone" : 4,
 		"color" : {
@@ -57,7 +57,7 @@
 		}
 	},
 	{
-		"name" : "Scorching",
+		"name" : "scorching",
 		"type" : "temperature",
 		"zone" : 5,
 		"color" : {

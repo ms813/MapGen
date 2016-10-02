@@ -2,9 +2,9 @@
 
 [
 	{ 
-		"name" : "Arid",
+		"name" : "arid",
 		"type" : "humidity",
-		"zone"	: 0,
+		"zone" : 0,
 		"color" : {
 			"r" : 255,
 			"g" : 0,
@@ -13,9 +13,9 @@
 		}
 	},
 	{
-		"name" : "Dry",
+		"name" : "dry",
 		"type" : "humidity",
-		"zone"	: 1,
+		"zone" : 1,
 		"color" : {
 			"r" : 255,
 			"g" : 128,
@@ -24,9 +24,9 @@
 		}
 	},
 	{
-		"name" : "Moderate",
+		"name" : "moderate",
 		"type" : "humidity",
-		"zone"	: 2,
+		"zone" : 2,
 		"color" : {
 			"r" : 255,
 			"g" : 255,
@@ -35,9 +35,9 @@
 		}
 	},
 	{
-		"name" : "Damp",
+		"name" : "damp",
 		"type" : "humidity",
-		"zone"	: 3,
+		"zone" : 3,
 		"color" : {
 			"r" : 0,
 			"g" : 255,
@@ -46,9 +46,9 @@
 		}
 	},
 	{
-		"name" : "Rainy",
+		"name" : "wet",
 		"type" : "humidity",
-		"zone"	: 4,
+		"zone" : 4,
 		"color" : {
 			"r" : 0,
 			"g" : 255,
@@ -57,9 +57,9 @@
 		}
 	},
 	{
-		"name" : "Monsoon",
+		"name" : "flooded",
 		"type" : "humidity",
-		"zone"	: 5,
+		"zone" : 5,
 		"color" : {
 			"r" : 0,
 			"g" : 0,

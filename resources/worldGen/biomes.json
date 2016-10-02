@@ -1,27 +1,163 @@
+//Biome data
 [
-	{
-		"biome_name"	:	"plains",
-		"default_tile"	:	"grass",
-		"special" : [			
-			{"tile_name" : "sand", 		"rarity": "8", 		"avg_size" : "8"},
-			{"tile_name" : "rock", 		"rarity": "8", 		"avg_size" : "4"},
-			{"tile_name" : "tree_leafy", "rarity": "16", 	"avg_size" : "1"},
-			{"tile_name" : "tree_dead", "rarity": "16", 	"avg_size" : "1"},
-			{"tile_name" : "bush", 		"rarity": "8", 		"avg_size" : "8"}			
-		]
+	{ 
+		"name" : "snow",		
+		//white
+		"color" : {
+			"r" : 255,
+			"g" : 255,
+			"b" : 255,
+			"a" : 255
+		}
 	},
-	{
-		"biome_name"	:	"desert",
-		"default_tile"	:	"sand",
-		"special" : [			
-			{"tile_name" : "rock", 		"rarity": "8", 		"avg_size" : "4"}	
-		]
+	{ 
+		"name" : "tundra",		
+		//pale blue
+		"color" : {
+			"r" : 128,
+			"g" : 255,
+			"b" : 255,
+			"a" : 255
+		}
 	},
-	{
-		"biome_name"	:	"forest",
-		"default_tile"	:	"tree_leafy",
-		"special" : [			
-			{"tile_name" : "grass", "rarity": "16", 	"avg_size" : "1"}						
-		]
+	{ 
+		"name" : "taiga",
+		//turqoise
+		"color" : {
+			"r" : 0,
+			"g" : 128,
+			"b" : 128,
+			"a" : 255
+		}
+	},
+	{ 
+		"name" : "coldDesert",
+		//pale yellow
+		"color" : {
+			"r" : 255,
+			"g" : 255,
+			"b" : 128,
+			"a" : 255
+		}
+	},
+	{ 
+		"name" : "swamp",
+		//dark green
+		"color" : {
+			"r" : 0,
+			"g" : 128,
+			"b" : 0,
+			"a" : 255
+		}
+	},
+	{ 
+		"name" : "temperateForest",
+		//light pink		
+		"color" : {
+			"r" : 255,
+			"g" : 128,
+			"b" : 255,
+			"a" : 255
+		}
+	},
+	{ 
+		"name" : "grassland",
+		//green		
+		"color" : {
+			"r" : 0,
+			"g" : 255,
+			"b" : 0,
+			"a" : 255
+		}
+	},
+	{ 
+		"name" : "badlands",
+		//brown		
+		"color" : {
+			"r" : 128,
+			"g" : 64,
+			"b" : 64,
+			"a" : 255
+		}
+	},
+	{ 
+		"name" : "tropicalRainforest",
+		//magenta		
+		"color" : {
+			"r" : 255,
+			"g" : 0,
+			"b" : 255,
+			"a" : 255
+		}
+	},
+	{ 
+		"name" : "savanna",
+		//pale green		
+		"color" : {
+			"r" : 128,
+			"g" : 255,
+			"b" : 128,
+			"a" : 255
+		}
+	},
+	{ 
+		"name" : "hotDesert",
+		//yellow		
+		"color" : {
+			"r" : 255,
+			"g" : 255,
+			"b" : 0,
+			"a" : 255
+		}
+	},
+	{ 
+		"name" : "scorched",
+		//yellow		
+		"color" : {
+			"r" : 255,
+			"g" : 0,
+			"b" : 0,
+			"a" : 255
+		}
+	},
+	{ 
+		"name" : "shallows",
+		//pale blue		
+		"color" : {
+			"r" : 0,
+			"g" : 128,
+			"b" : 255,
+			"a" : 255
+		}
+	},
+	{ 
+		"name" : "depths",
+		//black		
+		"color" : {
+			"r" : 0,
+			"g" : 0,
+			"b" : 0,
+			"a" : 255
+		}
+	},
+	{ 
+		"name" : "ocean",
+		//blue		
+		"color" : {
+			"r" : 0,
+			"g" : 0,
+			"b" : 255,
+			"a" : 255
+		}
+	},
+	{ 
+		"name" : "iceCap",
+		//cyan		
+		"color" : {
+			"r" : 0,
+			"g" : 255,
+			"b" : 255,
+			"a" : 255
+		}
 	}
 ]
