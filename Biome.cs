@@ -30,8 +30,7 @@ namespace ReSource
         {
             Biomes = new Dictionary<string, Biome>();
             BiomeLookup = new JsonReader(@"..\..\..\resources\worldGen\LandBiomeLookup.json").ReadJson<LandBiomeLookup>();
-            List<Biome> temp = new JsonReader(@"..\..\..\resources\worldGen\biomes.json").ReadJsonArray<Biome>();            
-            
+            List<Biome> temp = new JsonReader(@"..\..\..\resources\worldGen\biomes.json").ReadJsonArray<Biome>();           
             
             foreach (Biome b in temp)
             {

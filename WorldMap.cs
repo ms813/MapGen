@@ -222,19 +222,14 @@ namespace ReSource
             PerlinGenerator perlin = new PerlinGenerator();
             foreach(MapTile t in Tiles.Values)
             {
-                SetTilePerlin(t, perlin);
+                //get Perlin noise to get base elevation value            
+                int featureScale = MapSize.Y / 8;
+                t.Perlin = perlin.OctavePerlin(
+                        (double)t.GlobalIndex.X / featureScale,
+                        (double)t.GlobalIndex.Y / featureScale,
+                        4, 0.5);
             }
             NormalisePerlinCoefficients();
-        }
-
-        private void SetTilePerlin(MapTile tile, PerlinGenerator perlin)
-        {
-            //get Perlin noise to get base elevation value            
-            int featureScale = MapSize.Y / 8;
-            tile.Perlin = perlin.OctavePerlin(
-                    (double)tile.GlobalIndex.X / featureScale,
-                    (double)tile.GlobalIndex.Y / featureScale,
-                    4, 0.5);
         }
 
         private void NormalisePerlinCoefficients()

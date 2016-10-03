@@ -35,20 +35,9 @@
 		}
 	},
 	{
-		"name" : "damp",
-		"type" : "humidity",
-		"zone" : 3,
-		"color" : {
-			"r" : 0,
-			"g" : 255,
-			"b" : 0,
-			"a" : 255
-		}
-	},
-	{
 		"name" : "wet",
 		"type" : "humidity",
-		"zone" : 4,
+		"zone" : 3,
 		"color" : {
 			"r" : 0,
 			"g" : 255,
@@ -59,7 +48,7 @@
 	{
 		"name" : "flooded",
 		"type" : "humidity",
-		"zone" : 5,
+		"zone" : 4,
 		"color" : {
 			"r" : 0,
 			"g" : 0,
