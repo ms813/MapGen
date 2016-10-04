@@ -7,6 +7,8 @@ using System.Threading.Tasks;
 using SFML.Graphics;
 using SFML.System;
 
+using Newtonsoft.Json;
+
 namespace ReSource
 {
     class MapTile
@@ -14,33 +16,42 @@ namespace ReSource
         /*
          * For any map
          */
-        //General
+        //General              
         public Vector2i GlobalIndex { get; private set; }   //id in the whole world
-        public WorldMap ParentMap { get; private set; }
-        public List<MapTile> OrthogonalNeighbours = new List<MapTile>();
-        public List<MapTile> DiagonalNeighbours = new List<MapTile>();
-        public int TileSize { get; private set; }
-        public int LandmassId = -1;
 
+        [JsonIgnore]
+        public WorldMap ParentMap { get; private set; }
+        [JsonIgnore]
+        public List<MapTile> OrthogonalNeighbours = new List<MapTile>();
+        [JsonIgnore]
+        public List<MapTile> DiagonalNeighbours = new List<MapTile>();        
+        public int TileSize { get; private set; }
+
+        public int LandmassId = -1;
+                
+        [JsonIgnore]
         public ClimateZone HumidityZone;
+        [JsonIgnore]
         public ClimateZone TemperatureZone;
+        [JsonIgnore]
         public ClimateZone ElevationZone;
 
-        //Elevation
+        //Elevation        
         public double Elevation { get; set; }
-        //elevation noise coefficients
-        public double Perlin { get; set; }
-        public double Voronoi { get; set; }
+        //elevation noise coefficients        
+        public double ElevationPerlin { get; set; }        
+        public double ElevationVoronoi { get; set; }
         public double Gaussian { get; set; }
 
         //rivers
         public Vector2i DownslopeDir { get; set; }
+
         public int RiverVolume { get; set; }
-        public bool RiverSource = false;
+        
+        public bool RiverSource = false;        
         public bool DownhillToSea = false;
 
-        //water & moisture
-        public double Moisture { get; set; }
+        //water & moisture        
         public WaterType Water { get; set; }
         public bool Coast = false;
         public double RainShadow { get; set; }
@@ -59,11 +70,12 @@ namespace ReSource
         public int DistanceToCoast = Int32.MaxValue;
 
         //Biome
+        [JsonIgnore]
         public Biome Biome { get; set; }
 
         //colors for the different map views
         public Color DisplayColour;
-
+        
         public MapTile(WorldMap parentMap, Vector2i globalIndex, int tileSize)
         {
             this.ParentMap = parentMap;
@@ -71,8 +83,8 @@ namespace ReSource
             this.GlobalIndex = globalIndex;          
             
             Water = WaterType.Unassigned;            
-        }    
-       
+        }
+
         public void SetElevationColor()
         {
             Color color = new Color();
@@ -114,20 +126,6 @@ namespace ReSource
             }            
     
             DisplayColour = color;
-        }  
-
-        public void SetMoistureColor()
-        {
-            if (Water != WaterType.Ocean)
-            {
-                Color c = new Color();
-                c.A = 255;
-                double interpolate = MathHelper.Scale(0, 1, 0, 255, Moisture);
-                c.R = (byte)(255 - interpolate);
-                c.G = (byte)(interpolate);
-
-                DisplayColour = c;
-            }            
         }
 
         public void SetBiomeColor()
@@ -154,8 +152,8 @@ namespace ReSource
 
             DisplayColour.A = (byte)(255 * WindStrength);
             
-        }            
-         
+        }
+
         public void SetLandmassColor()
         {
             if (LandmassId == -1)

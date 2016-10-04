@@ -14,8 +14,7 @@ using SFML.Window;
 namespace ReSource
 {
     class WorldMap
-    {
-        [JsonProperty("tiles")]
+    {        
         public Dictionary<Vector2i, MapTile> Tiles { get; private set; }
         private List<Vector2i> ActiveTileIndices = new List<Vector2i>();
         private List<Landmass> LandMasses = new List<Landmass>();
@@ -28,20 +27,15 @@ namespace ReSource
         private bool drawWind = false;
 
         //public static Font Font = new Font(@"..\..\..\resources\fonts\arial.ttf");
-
-        [JsonProperty("tileSize")]
+        
         public int TileSize = 32;
-
-        [JsonProperty("maxElevation")]
+        
         public readonly double MaxElevation = 1.0d;
-
-        [JsonProperty("minElevation")]
+        
         public readonly double MinElevation = 0.0d;
 
-        [JsonProperty("seaLevel")]
         public readonly double SeaLevel = 0.2d;
 
-        [JsonProperty("mountainThreshold")]
         public readonly double mountainThreshold = 0.45d;       //cutoff height for a tile to be considered a mountain
 
         public Vector2i MapSize { get; private set; }        
@@ -69,8 +63,7 @@ namespace ReSource
             ExecuteTimedFunction(CalculateTemperature);
             ExecuteTimedFunction(CreateRivers);
             ExecuteTimedFunction(CalculateRainShadow);
-            ExecuteTimedFunction(AssignRainfall);
-            //ExecuteTimedFunction(AssignMoisture);
+            ExecuteTimedFunction(AssignRainfall);            
             ExecuteTimedFunction(AssignBiomes);
             ExecuteTimedFunction(InitialiseDisplay);
             ExecuteTimedFunction(CreateVertexArray);
@@ -236,7 +229,7 @@ namespace ReSource
             {
                 //get Perlin noise to get base elevation value            
                 int featureScale = MapSize.Y / 8;
-                t.Perlin = perlin.OctavePerlin(
+                t.ElevationPerlin = perlin.OctavePerlin(
                         (double)t.GlobalIndex.X / featureScale,
                         (double)t.GlobalIndex.Y / featureScale,
                         4, 0.5);
@@ -247,12 +240,12 @@ namespace ReSource
         private void NormalisePerlinCoefficients()
         {
             //get highest and lowest elevations and normalise to world min and max
-            double min = Tiles.Values.Min(t => t.Perlin);
-            double max = Tiles.Values.Max(t => t.Perlin);            
+            double min = Tiles.Values.Min(t => t.ElevationPerlin);
+            double max = Tiles.Values.Max(t => t.ElevationPerlin);            
 
             foreach (MapTile t in Tiles.Values)
             {
-                t.Perlin = MathHelper.Scale(min, max, 0, 1, t.Perlin);                
+                t.ElevationPerlin = MathHelper.Scale(min, max, 0, 1, t.ElevationPerlin);                
             }
         }
 
@@ -317,18 +310,18 @@ namespace ReSource
                     }
                 }
             }
-            tile.Voronoi = min;
+            tile.ElevationVoronoi = min;
         }       
 
         private void NormaliseVoronoiCoefficients()
         {
             //get highest and lowest elevations and normalise to world min and max
-            double min = Tiles.Values.Min(t => t.Voronoi);
-            double max = Tiles.Values.Max(t => t.Voronoi);
+            double min = Tiles.Values.Min(t => t.ElevationVoronoi);
+            double max = Tiles.Values.Max(t => t.ElevationVoronoi);
          
             foreach (MapTile t in Tiles.Values)
             {
-                t.Voronoi = MathHelper.Scale(min, max, 0.1, 1.5, t.Voronoi);
+                t.ElevationVoronoi = MathHelper.Scale(min, max, 0.1, 1.5, t.ElevationVoronoi);
             }
         }
 
@@ -338,7 +331,7 @@ namespace ReSource
             foreach (MapTile tile in Tiles.Values)
             {
                 //tile.Elevation = tile.Perlin * tile.Gaussian * tile.Voronoi;  
-                tile.Elevation = tile.Perlin * tile.Voronoi;
+                tile.Elevation = tile.ElevationPerlin * tile.ElevationVoronoi;
             }
         } 
 
@@ -1140,15 +1133,6 @@ namespace ReSource
                 CreateVertexArray();
                 Console.WriteLine("Displaying random walks");
             }
-            else if (e.Code == Keyboard.Key.M)
-            {
-                foreach (MapTile t in Tiles.Values)
-                {
-                    t.SetMoistureColor();
-                }
-                CreateVertexArray();
-                Console.WriteLine("Displaying moisture map");
-            }
             else if (e.Code == Keyboard.Key.B)
             {
                 foreach (MapTile t in Tiles.Values)
@@ -1205,13 +1189,13 @@ namespace ReSource
             {
                 if(e.Control)
                 {
-                    Console.WriteLine("Saving map... Enter map name:");
+                    Console.WriteLine("Saving map...");
                     string mapName = "world1";
-                    string path = @"..\..\saves\" + mapName + ".worldmap";
+                    string path = @"..\..\saves\";
 
-                    MapSaver ms = new MapSaver();
+                    MapIO ms = new MapIO();
                     
-                    ms.Save(this, path);
+                    ms.Save(this, path, mapName);
                 }
                 else
                 {
