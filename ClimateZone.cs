@@ -28,9 +28,9 @@ namespace ReSource
 
         static ClimateZone()
         {
-            ElevationZones = new JsonReader(@"..\..\..\resources\worldGen\ElevationZone.json").ReadJsonArray<ClimateZone>();
-            TemperatureZones = new JsonReader(@"..\..\..\resources\worldGen\TemperatureZone.json").ReadJsonArray<ClimateZone>();
-            HumidityZones = new JsonReader(@"..\..\..\resources\worldGen\HumidityZone.json").ReadJsonArray<ClimateZone>();
+            ElevationZones = new JsonReader(@"..\..\resources\worldGen\ElevationZone.json").ReadJsonArray<ClimateZone>();
+            TemperatureZones = new JsonReader(@"..\..\resources\worldGen\TemperatureZone.json").ReadJsonArray<ClimateZone>();
+            HumidityZones = new JsonReader(@"..\..\resources\worldGen\HumidityZone.json").ReadJsonArray<ClimateZone>();
         }
 
         public static ClimateZone GetTemperatureZone(String name)

@@ -5,6 +5,8 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Newtonsoft.Json;
+
 using SFML.Graphics;
 using SFML.System;
 using SFML.Window;
@@ -12,8 +14,9 @@ using SFML.Window;
 namespace ReSource
 {
     class WorldMap
-    {   
-        private Dictionary<Vector2i, MapTile> Tiles = new Dictionary<Vector2i, MapTile>();
+    {
+        [JsonProperty("tiles")]
+        public Dictionary<Vector2i, MapTile> Tiles { get; private set; }
         private List<Vector2i> ActiveTileIndices = new List<Vector2i>();
         private List<Landmass> LandMasses = new List<Landmass>();
 
@@ -26,11 +29,19 @@ namespace ReSource
 
         //public static Font Font = new Font(@"..\..\..\resources\fonts\arial.ttf");
 
+        [JsonProperty("tileSize")]
         public int TileSize = 32;
 
+        [JsonProperty("maxElevation")]
         public readonly double MaxElevation = 1.0d;
+
+        [JsonProperty("minElevation")]
         public readonly double MinElevation = 0.0d;
+
+        [JsonProperty("seaLevel")]
         public readonly double SeaLevel = 0.2d;
+
+        [JsonProperty("mountainThreshold")]
         public readonly double mountainThreshold = 0.45d;       //cutoff height for a tile to be considered a mountain
 
         public Vector2i MapSize { get; private set; }        
@@ -38,7 +49,8 @@ namespace ReSource
         public WorldMap(Vector2i mapSize)
         {
             this.MapSize = mapSize;
-            
+            Tiles = new Dictionary<Vector2i, MapTile>();
+
             ExecuteTimedFunction(CreateTiles);
             ExecuteTimedFunction(AssignTileNeighbours);
             ExecuteTimedFunction(() => GenerateRandomWalks(true, false, 8,8,5), "Generate Random Walks");
@@ -1191,12 +1203,25 @@ namespace ReSource
             }
             else if(e.Code == Keyboard.Key.S)
             {
-                foreach(MapTile t in Tiles.Values)
+                if(e.Control)
                 {
-                    t.SetRainShadowColor();
+                    Console.WriteLine("Saving map... Enter map name:");
+                    string mapName = "world1";
+                    string path = @"..\..\saves\" + mapName + ".worldmap";
+
+                    MapSaver ms = new MapSaver();
+                    
+                    ms.Save(this, path);
                 }
-                CreateVertexArray();
-                Console.WriteLine("Displaying rain shadow map");
+                else
+                {
+                    foreach (MapTile t in Tiles.Values)
+                    {
+                        t.SetRainShadowColor();
+                    }
+                    CreateVertexArray();
+                    Console.WriteLine("Displaying rain shadow map");
+                }                
             }
             else if (e.Code == Keyboard.Key.R)
             {
