@@ -15,7 +15,7 @@ namespace ReSource
 {
     class WorldMap
     {        
-        public Dictionary<Vector2i, MapTile> Tiles { get; private set; }
+        public List<MapTile> Tiles { get; private set; }
         private List<Vector2i> ActiveTileIndices = new List<Vector2i>();
         private List<Landmass> LandMasses = new List<Landmass>();
 
@@ -36,20 +36,21 @@ namespace ReSource
 
         public readonly double SeaLevel = 0.2d;
 
-        public readonly double mountainThreshold = 0.45d;       //cutoff height for a tile to be considered a mountain
+        public readonly double mountainThreshold = 0.45d;       //cutoff height for a tile to be considered a mountain                                                               
+        public readonly int windThresholdDist = 30; //threshold distance from coast for max wind
 
         public Vector2i MapSize { get; private set; }        
 
         public WorldMap(Vector2i mapSize)
         {
             this.MapSize = mapSize;
-            Tiles = new Dictionary<Vector2i, MapTile>();
+            Tiles = new List<MapTile>();
 
             ExecuteTimedFunction(CreateTiles);
             ExecuteTimedFunction(AssignTileNeighbours);
-            ExecuteTimedFunction(() => GenerateRandomWalks(true, false, 8,8,5), "Generate Random Walks");
+            ExecuteTimedFunction(() => GenerateRandomWalks(true, true, 8,8,5), "Generate Random Walks");
             ExecuteTimedFunction(CalculatePerlinCoefficients);
-            ExecuteTimedFunction(CalculateGaussianCoefficients);
+            //ExecuteTimedFunction(CalculateGaussianCoefficients);
             ExecuteTimedFunction(CalculateVoronoiCoefficients);
             ExecuteTimedFunction(SetTileElevations);
             ExecuteTimedFunction(RescaleElevation);
@@ -104,14 +105,14 @@ namespace ReSource
                 {
                     Vector2i tileIndex = new Vector2i(x, y);
                     MapTile tile = new MapTile(this, tileIndex, TileSize);                    
-                    Tiles.Add(tileIndex, tile);
+                    Tiles.Add(tile);
                 }
             }
         }
 
         private void AssignTileNeighbours()
         {
-            Parallel.ForEach(Tiles.Values, t =>
+            Parallel.ForEach(Tiles, t =>
             {
                 foreach (Vector2i dir in MathHelper.CardinalDirections)
                 {
@@ -225,7 +226,7 @@ namespace ReSource
         private void CalculatePerlinCoefficients()
         {
             PerlinGenerator perlin = new PerlinGenerator();
-            foreach(MapTile t in Tiles.Values)
+            foreach(MapTile t in Tiles)
             {
                 //get Perlin noise to get base elevation value            
                 int featureScale = MapSize.Y / 8;
@@ -240,10 +241,10 @@ namespace ReSource
         private void NormalisePerlinCoefficients()
         {
             //get highest and lowest elevations and normalise to world min and max
-            double min = Tiles.Values.Min(t => t.ElevationPerlin);
-            double max = Tiles.Values.Max(t => t.ElevationPerlin);            
+            double min = Tiles.Min(t => t.ElevationPerlin);
+            double max = Tiles.Max(t => t.ElevationPerlin);            
 
-            foreach (MapTile t in Tiles.Values)
+            foreach (MapTile t in Tiles)
             {
                 t.ElevationPerlin = MathHelper.Scale(min, max, 0, 1, t.ElevationPerlin);                
             }
@@ -251,7 +252,7 @@ namespace ReSource
 
         private void CalculateGaussianCoefficients()
         {
-            foreach (MapTile t in Tiles.Values)
+            foreach (MapTile t in Tiles)
             {
                 SetTileGaussian(t);
             }
@@ -263,7 +264,7 @@ namespace ReSource
             double scaleX = MathHelper.Scale(0, MapSize.X, -1.5, 1.5, tile.GlobalIndex.X);
             double elevationDiff = MaxElevation - MinElevation;
             double gaussianWidth = 1;
-            tile.Gaussian = elevationDiff * Math.Exp(-Math.Pow(scaleX, 2d) / gaussianWidth) - (((double)elevationDiff - MaxElevation) / (double)elevationDiff);
+            tile.ElevationGaussian = elevationDiff * Math.Exp(-Math.Pow(scaleX, 2d) / gaussianWidth) - (((double)elevationDiff - MaxElevation) / (double)elevationDiff);
         }
 
         private void CalculateVoronoiCoefficients()
@@ -281,7 +282,7 @@ namespace ReSource
             timer.Interval = 1000;
             timer.Enabled = true;
             
-            Parallel.ForEach(Tiles.Values, (t) =>
+            Parallel.ForEach(Tiles, (t) =>
             {
                 SetTileVoronoi(t);
                 voronoiCount++;      
@@ -316,10 +317,10 @@ namespace ReSource
         private void NormaliseVoronoiCoefficients()
         {
             //get highest and lowest elevations and normalise to world min and max
-            double min = Tiles.Values.Min(t => t.ElevationVoronoi);
-            double max = Tiles.Values.Max(t => t.ElevationVoronoi);
+            double min = Tiles.Min(t => t.ElevationVoronoi);
+            double max = Tiles.Max(t => t.ElevationVoronoi);
          
-            foreach (MapTile t in Tiles.Values)
+            foreach (MapTile t in Tiles)
             {
                 t.ElevationVoronoi = MathHelper.Scale(min, max, 0.1, 1.5, t.ElevationVoronoi);
             }
@@ -328,7 +329,7 @@ namespace ReSource
         private void SetTileElevations()
         {
             //multiply the weighting factors to get the final elevations
-            foreach (MapTile tile in Tiles.Values)
+            foreach (MapTile tile in Tiles)
             {
                 //tile.Elevation = tile.Perlin * tile.Gaussian * tile.Voronoi;  
                 tile.Elevation = tile.ElevationPerlin * tile.ElevationVoronoi;
@@ -338,10 +339,10 @@ namespace ReSource
         private void RescaleElevation()
         {
             //get highest and lowest elevations and normalise to world min and max
-            double min = Tiles.Values.Min(t => t.Elevation);
-            double max = Tiles.Values.Max(t => t.Elevation);
+            double min = Tiles.Min(t => t.Elevation);
+            double max = Tiles.Max(t => t.Elevation);
 
-            foreach (MapTile t in Tiles.Values)
+            foreach (MapTile t in Tiles)
             {
                 t.Elevation = MathHelper.Scale(min, max, MinElevation, MaxElevation, t.Elevation);               
             }
@@ -352,7 +353,7 @@ namespace ReSource
             Queue<MapTile> fillQ = new Queue<MapTile>();
 
             //go around the edge of the map and make edge chunks assign water at the edge of the map
-            foreach(MapTile tile in Tiles.Values)
+            foreach(MapTile tile in Tiles)
             {
                 if (IsMapBorder(tile) && tile.Elevation < SeaLevel)
                 {
@@ -431,11 +432,11 @@ namespace ReSource
             //loop over the tiles and assign Water == WaterType.Unassigned to land masses
             //using a flood fill
             int landmassCount = 0;
-            List<MapTile> unassignedTiles = Tiles.Values.Where(t => t.Water == WaterType.Unassigned).ToList();
+            List<MapTile> unassignedTiles = Tiles.Where(t => t.Water == WaterType.Unassigned).ToList();
             
             while (unassignedTiles.Count() > 0){
                 LandMasses.Add(CreateLandmass(unassignedTiles.First(), landmassCount++));
-                unassignedTiles = Tiles.Values.Where(t => t.Water == WaterType.Unassigned).ToList();
+                unassignedTiles = Tiles.Where(t => t.Water == WaterType.Unassigned).ToList();
             }          
         }
 
@@ -468,7 +469,7 @@ namespace ReSource
 
         private void AssignElevationZones()
         {
-            foreach(MapTile t in Tiles.Values)
+            foreach(MapTile t in Tiles)
             {
                 t.ElevationZone = GetElevationZone(t);
             }
@@ -506,8 +507,8 @@ namespace ReSource
      
         private void AssignDownslopes()
         {
-            Parallel.ForEach(Tiles.Values, tile => AssignTileDownslope(tile));
-            Parallel.ForEach(Tiles.Values, tile => AssignTileDownhillToSea(tile));
+            Parallel.ForEach(Tiles, tile => AssignTileDownslope(tile));
+            Parallel.ForEach(Tiles, tile => AssignTileDownhillToSea(tile));
         }
         
         private void AssignTileDownslope(MapTile tile)
@@ -534,18 +535,18 @@ namespace ReSource
                 Vector2i nextDownhillTile = nextTile.GlobalIndex + nextTile.DownslopeDir;
                 nextTile = GetTileByIndex(nextDownhillTile);
 
+                if(nextTile == null || nextTile.Water == WaterType.Ocean)
+                {
+                    tile.DownhillToSea = true;
+                    return;
+                }
+                
                 if (nextTile.DownslopeDir == new Vector2i(0, 0))
                 {
                     tile.DownhillToSea = false;
                     return;
                 }
-
-                if (nextTile.Water == WaterType.Ocean)
-                {
-                    tile.DownhillToSea = true;                    
-                    return;
-                }
-            }
+            }             
         }
 
         private void GenerateWindDirection()
@@ -554,7 +555,7 @@ namespace ReSource
             PerlinGenerator perlin = new PerlinGenerator();
 
             //assign each tile a wind direction
-            foreach (MapTile t in Tiles.Values)
+            foreach (MapTile t in Tiles)
             {
                 t.PrevailingWindDir = WindHelper.GetPrevailingWindDirection(t);
                 
@@ -566,19 +567,19 @@ namespace ReSource
             }
 
             //normalise wind noise to between -Pi < x < Pi
-            double min = Tiles.Values.Min(t => t.WindNoise);
-            double max = Tiles.Values.Max(t => t.WindNoise);
+            double min = Tiles.Min(t => t.WindNoise);
+            double max = Tiles.Max(t => t.WindNoise);
 
-            foreach (MapTile t in Tiles.Values)
+            foreach (MapTile t in Tiles)
             {
                 t.WindNoise = MathHelper.Scale(min, max, -Math.PI, Math.PI, t.WindNoise);
                 t.WindDirection = WindHelper.GetWindDirection(t);
             }
 
             //normalise the wind direction to 0 < x < 2pi
-            min = Tiles.Values.Min(t => t.WindDirection);
-            max = Tiles.Values.Max(t => t.WindDirection);
-            foreach (MapTile t in Tiles.Values)
+            min = Tiles.Min(t => t.WindDirection);
+            max = Tiles.Max(t => t.WindDirection);
+            foreach (MapTile t in Tiles)
             {
                 t.WindDirection = MathHelper.Scale(min, max, 0, 2d * Math.PI, t.WindDirection);
             }
@@ -590,7 +591,7 @@ namespace ReSource
             //so randomise the perlin generator again
             PerlinGenerator perlin = new PerlinGenerator();
 
-            foreach(MapTile t in Tiles.Values)
+            foreach(MapTile t in Tiles)
             {
                 int featureScale = t.ParentMap.MapSize.Y / 8;
                 double noise = perlin.OctavePerlin(
@@ -603,15 +604,12 @@ namespace ReSource
             }
 
             //normalise base wind strength map between 0 and 1
-            double min = Tiles.Values.Min(t => t.BaseWindStrength);
-            double max = Tiles.Values.Max(t => t.BaseWindStrength);
-            foreach(MapTile t in Tiles.Values)
+            double min = Tiles.Min(t => t.BaseWindStrength);
+            double max = Tiles.Max(t => t.BaseWindStrength);
+            foreach(MapTile t in Tiles)
             {
                 t.BaseWindStrength = MathHelper.Scale(min, max, 0, 1, t.BaseWindStrength);
-            }
-
-            //threshold distance from coast for max wind
-            int windThresholdDist = 30;
+            }            
 
             //calculate continent wind strength based on distance to coast
             //do each land tile first
@@ -642,7 +640,7 @@ namespace ReSource
                 });
             }
           
-            foreach(MapTile t in Tiles.Values)
+            foreach(MapTile t in Tiles)
             {
                 //scale wind strength using the threshold value
                 double x = (double)t.DistanceToCoast / windThresholdDist;
@@ -658,16 +656,16 @@ namespace ReSource
             }
 
             //add the base speed and the continent speed to get the wind speed
-            foreach(MapTile t in Tiles.Values)
+            foreach(MapTile t in Tiles)
             {               
                 //t.WindStrength = t.BaseWindStrength * t.ContinentWindStrength;
                 t.WindStrength = t.BaseWindStrength + t.ContinentWindStrength;
                 //t.WindStrength = t.ContinentWindStrength;
             }
 
-            min = Tiles.Values.Min(t => t.WindStrength);
-            max = Tiles.Values.Max(t => t.WindStrength);
-            foreach(MapTile t in Tiles.Values)
+            min = Tiles.Min(t => t.WindStrength);
+            max = Tiles.Max(t => t.WindStrength);
+            foreach(MapTile t in Tiles)
             {
                 t.WindStrength = MathHelper.Scale(min, max, 0, 1, t.WindStrength);
             }
@@ -681,7 +679,7 @@ namespace ReSource
             double temperatureDisortionFactor = 0.5;
             double oceanTempScaleFactor = 0.8;
 
-            foreach (MapTile t in Tiles.Values)
+            foreach (MapTile t in Tiles)
             {
                 double fractionalLatitude = (double)t.GlobalIndex.Y / MapSize.Y;
                 double tBase;
@@ -722,9 +720,9 @@ namespace ReSource
 
             //normalise temperature to between 0 and 1
             //and set temperature zone
-            double min = Tiles.Values.Min(t => t.Temperature);
-            double max = Tiles.Values.Max(t => t.Temperature);
-            foreach(MapTile t in Tiles.Values)
+            double min = Tiles.Min(t => t.Temperature);
+            double max = Tiles.Max(t => t.Temperature);
+            foreach(MapTile t in Tiles)
             {
                 t.Temperature = MathHelper.Scale(min, max, 0, 1, t.Temperature);
 
@@ -760,7 +758,7 @@ namespace ReSource
         private List<MapTile> GenerateRiverSources(int riverCount)
         {                      
             //get a list of tiles...
-            IEnumerable<MapTile> mountains = Tiles.Values
+            IEnumerable<MapTile> mountains = Tiles
                 .Where(t => t.DownhillToSea                 //which have a downhill path to the sea
                     && t.Water == WaterType.Land            //which are land
                     && t.Elevation >= mountainThreshold);   //and which are high enough to be considered mountains
@@ -806,7 +804,7 @@ namespace ReSource
         private void CalculateRainShadow()
         {
             //loop over non-ocean tiles
-            foreach (MapTile t in Tiles.Values.Where(t => t.Water != WaterType.Ocean))
+            foreach (MapTile t in Tiles.Where(t => t.Water != WaterType.Ocean))
             {
                 //follow the wind direction backwards until we reach a water tile//Create a path of MapTiles by following the wind direction backwards until an ocean tile is reached
                 List<MapTile> tilePath = new List<MapTile>();
@@ -850,15 +848,15 @@ namespace ReSource
             }
 
             //normalise the rain shadow to between 0 and 1 (0 receives full rainfall)
-            double min = Tiles.Values.Min(t => t.RainShadow);
-            double max = Tiles.Values.Max(t => t.RainShadow);
-            Tiles.Values.ToList().ForEach(t => t.RainShadow = MathHelper.Scale(min, max, 0, 1, t.RainShadow));
+            double min = Tiles.Min(t => t.RainShadow);
+            double max = Tiles.Max(t => t.RainShadow);
+            Tiles.ToList().ForEach(t => t.RainShadow = MathHelper.Scale(min, max, 0, 1, t.RainShadow));
         }
 
         private void AssignRainfall()
         {
             PerlinGenerator perlin = new PerlinGenerator();
-            foreach(MapTile t in Tiles.Values)
+            foreach(MapTile t in Tiles)
             {
                 double featureScale = MapSize.Y / 2;
                 t.Rainfall = perlin.OctavePerlin(
@@ -868,10 +866,10 @@ namespace ReSource
             }
 
             //normalise the noise, then scale by the rainshadow
-            double min = Tiles.Values.Min(t => t.Rainfall);
-            double max = Tiles.Values.Max(t => t.Rainfall);            
+            double min = Tiles.Min(t => t.Rainfall);
+            double max = Tiles.Max(t => t.Rainfall);            
             
-            foreach (MapTile t in Tiles.Values)
+            foreach (MapTile t in Tiles)
             {
                 t.Rainfall = MathHelper.Scale(min, max, 0, 1, t.Rainfall);
                 t.Rainfall *= (1 - t.RainShadow);
@@ -890,7 +888,7 @@ namespace ReSource
                 count.Add(b, 0);
             }
 
-            foreach(MapTile t in Tiles.Values)
+            foreach(MapTile t in Tiles)
             {
                 t.Biome = Biome.GetBiome(t);
                 count[t.Biome.Name]++;
@@ -904,9 +902,10 @@ namespace ReSource
 
         private void InitialiseDisplay()
         {
-            foreach (MapTile t in Tiles.Values)
+            TileColourHelper colorHelper = new TileColourHelper();
+            foreach (MapTile t in Tiles)
             {
-                t.SetElevationColor();
+                colorHelper.SetElevationColor(t);
             }
 
             //activate tiles in the middle of the view            
@@ -925,7 +924,7 @@ namespace ReSource
             downslopeArrows = new VertexArray(PrimitiveType.Lines);
             windArrows = new VertexArray(PrimitiveType.Lines);
 
-            foreach (MapTile tile in Tiles.Values)
+            foreach (MapTile tile in Tiles)
             {
                 Vertex vertex = new Vertex();
                 vertex.Position = new Vector2f(tile.GlobalIndex.X, tile.GlobalIndex.Y) * TileSize;
@@ -1067,12 +1066,20 @@ namespace ReSource
 
         private MapTile GetTileByIndex(Vector2i index)
         {
-            if(Tiles.ContainsKey(index))
-            {
-                return Tiles[index];
-            }            
+            int i = index.X * MapSize.Y + index.Y;
+            
 
-            return null;            
+            if (index.X > 0 && index.X < MapSize.X
+                && index.Y > 0 && index.Y < MapSize.Y
+                && i > 0 && i < Tiles.Count())
+            {
+                return Tiles[i];
+            }                       
+            else
+            {                
+                //Console.WriteLine("Tile: {0}, index: {1}", Tiles[i].GlobalIndex, index);
+                return null;
+            }                                     
         }
 
         public MapTile GetTileByWorldPos(Vector2f worldPos)
@@ -1135,27 +1142,30 @@ namespace ReSource
             }
             else if (e.Code == Keyboard.Key.B)
             {
-                foreach (MapTile t in Tiles.Values)
+                TileColourHelper colorHelper = new TileColourHelper();
+                foreach (MapTile t in Tiles)
                 {
-                    t.SetBiomeColor();
+                    colorHelper.SetBiomeColor(t);                    
                 }
                 CreateVertexArray();
                 Console.WriteLine("Displaying biome map");
             }
             else if (e.Code == Keyboard.Key.E)
             {
-                foreach (MapTile t in Tiles.Values)
+                TileColourHelper colorHelper = new TileColourHelper();
+                foreach (MapTile t in Tiles)
                 {
-                    t.SetElevationColor();
+                    colorHelper.SetElevationColor(t);
                 }  
                 CreateVertexArray();
                 Console.WriteLine("Displaying elevation map");
             }
             else if (e.Code == Keyboard.Key.W)
             {
-                foreach (MapTile t in Tiles.Values)
+                TileColourHelper colorHelper = new TileColourHelper();
+                foreach (MapTile t in Tiles)
                 {
-                    t.SetWindColor();
+                    colorHelper.SetWindColor(t);                    
                 }
                 CreateVertexArray();
                 Console.WriteLine("Displaying wind map");
@@ -1169,18 +1179,20 @@ namespace ReSource
             }
             else if (e.Code == Keyboard.Key.L)
             {
-                foreach (MapTile t in Tiles.Values)
+                TileColourHelper colorHelper = new TileColourHelper();
+                foreach (MapTile t in Tiles)
                 {
-                    t.SetLandmassColor();
+                    colorHelper.SetLandmassColor(t);
                 }
                 CreateVertexArray();
                 Console.WriteLine("Displaying landmass map");
             }
             else if (e.Code == Keyboard.Key.T)
             {
-                foreach(MapTile t in Tiles.Values)
+                TileColourHelper colorHelper = new TileColourHelper();
+                foreach (MapTile t in Tiles)
                 {
-                    t.SetTemperatureColor();
+                    colorHelper.SetTemperatureColor(t);                    
                 }
                 CreateVertexArray();
                 Console.WriteLine("Displaying temperature map");
@@ -1188,20 +1200,19 @@ namespace ReSource
             else if(e.Code == Keyboard.Key.S)
             {
                 if(e.Control)
-                {
-                    Console.WriteLine("Saving map...");
-                    string mapName = "world1";
-                    string path = @"..\..\saves\";
+                {                    
+                    string mapName = "world1";                   
 
                     MapIO ms = new MapIO();
                     
-                    ms.Save(this, path, mapName);
+                    ms.Save(this, mapName);
                 }
                 else
                 {
-                    foreach (MapTile t in Tiles.Values)
+                    TileColourHelper colorHelper = new TileColourHelper();
+                    foreach (MapTile t in Tiles)
                     {
-                        t.SetRainShadowColor();
+                        colorHelper.SetRainShadowColor(t);
                     }
                     CreateVertexArray();
                     Console.WriteLine("Displaying rain shadow map");
@@ -1209,36 +1220,40 @@ namespace ReSource
             }
             else if (e.Code == Keyboard.Key.R)
             {
-                foreach (MapTile t in Tiles.Values)
+                TileColourHelper colorHelper = new TileColourHelper();
+                foreach (MapTile t in Tiles)
                 {
-                    t.SetRainfallColor();
+                    colorHelper.SetRainfallColor(t);
                 }
                 CreateVertexArray();
                 Console.WriteLine("Displaying rainfall map");
             }
             else if (e.Code == Keyboard.Key.Num1)
             {
-                foreach (MapTile t in Tiles.Values)
+                TileColourHelper colorHelper = new TileColourHelper();
+                foreach (MapTile t in Tiles)
                 {
-                    t.SetElevationZoneColor();
+                    colorHelper.SetElevationZoneColor(t);
                 }
                 CreateVertexArray();
                 Console.WriteLine("Displaying elevation zone map");
             }
             else if (e.Code == Keyboard.Key.Num2)
             {
-                foreach (MapTile t in Tiles.Values)
+                TileColourHelper colorHelper = new TileColourHelper();
+                foreach (MapTile t in Tiles)
                 {
-                    t.SetTemperatureZoneColor();
+                    colorHelper.SetTemperatureZoneColor(t);
                 }
                 CreateVertexArray();
                 Console.WriteLine("Displaying temperature zone map");
             }
             else if (e.Code == Keyboard.Key.Num3)
             {
-                foreach (MapTile t in Tiles.Values)
+                TileColourHelper colorHelper = new TileColourHelper();
+                foreach (MapTile t in Tiles)
                 {
-                    t.SetHumidityZoneColor();
+                    colorHelper.SetHumidityZoneColor(t);
                 }
                 CreateVertexArray();
                 Console.WriteLine("Displaying humidity zone map");
@@ -1277,7 +1292,8 @@ namespace ReSource
                 for (int x = -tilesX/2 + centerTileX; x < tilesX/2 + centerTileX + 1; x++)
                 {
                     Vector2i tileIndex = new Vector2i(x, y);                    
-                    if (Tiles.ContainsKey(tileIndex))
+                    if (x > 0 && x < MapSize.X
+                        && y > 0 && y < MapSize.Y)
                     {
                         ActiveTileIndices.Add(tileIndex);                   
                     }                    
