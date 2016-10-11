@@ -9,9 +9,7 @@ using SFML.System;
 namespace ReSource
 {
     class MathHelper
-    {
-        public static Random rnd = new Random();
-
+    {       
         public class Direction
         {
             public static Vector2i North = new Vector2i(0, -1);
@@ -23,8 +21,7 @@ namespace ReSource
             public static Vector2i SouthEast = new Vector2i(1, 1);
             public static Vector2i SouthWest = new Vector2i(-1, 1);
             public static Vector2i NorthWest = new Vector2i(-1, -1);
-        }
-        
+        }        
 
         public static Vector2i[] CardinalDirections = {
            Direction.North,
@@ -38,15 +35,7 @@ namespace ReSource
             Direction.SouthEast,
             Direction.SouthWest,
             Direction.NorthWest
-        };
-        
-        public static double NormalDistribution(double mean = 0, double stdDev = 1)
-        {
-            double u1 = rnd.NextDouble(); //these are uniform(0,1) random doubles
-            double u2 = rnd.NextDouble();
-            double randStdNormal = Math.Sqrt(-2.0 * Math.Log(u1)) * Math.Sin(2.0 * Math.PI * u2); //random normal(0,1)
-            return mean + stdDev * randStdNormal;
-        }
+        };      
 
         public static double Lerp(double a, double b, double x)
         {         

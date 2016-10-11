@@ -29,7 +29,7 @@ namespace ReSource
         {
             double aspectRatio = (double)Game.WindowSize.X / (double)Game.WindowSize.Y;
             Vector2i mapSize = new Vector2i((int)Math.Round(aspectRatio * (double)mapY), mapY);
-            map = new WorldMap(mapSize);            
+            map = new WorldMapBuilder("world1").Build();
 
             //hook up input listeners
             mouseMoved += new EventHandler<MouseMoveEventArgs>(map.OnMouseMoved);

@@ -26,11 +26,14 @@ namespace ReSource
         public static List<ClimateZone> TemperatureZones { get; private set; }
         public static List<ClimateZone> HumidityZones { get; private set; }
 
+        private static string elevationZonePath = @"..\..\resources\worldGen\ElevationZone.json";
+        private static string temperatureZonePath = @"..\..\resources\worldGen\TemperatureZone.json";
+        private static string humidityZonePath = @"..\..\resources\worldGen\HumidityZone.json";
         static ClimateZone()
         {
-            ElevationZones = new JsonReader(@"..\..\resources\worldGen\ElevationZone.json").ReadJsonArray<ClimateZone>();
-            TemperatureZones = new JsonReader(@"..\..\resources\worldGen\TemperatureZone.json").ReadJsonArray<ClimateZone>();
-            HumidityZones = new JsonReader(@"..\..\resources\worldGen\HumidityZone.json").ReadJsonArray<ClimateZone>();
+            ElevationZones = new JsonReader().ReadJsonArray<ClimateZone>(elevationZonePath);
+            TemperatureZones = new JsonReader().ReadJsonArray<ClimateZone>(temperatureZonePath);
+            HumidityZones = new JsonReader().ReadJsonArray<ClimateZone>(humidityZonePath);
         }
 
         public static ClimateZone GetTemperatureZone(String name)

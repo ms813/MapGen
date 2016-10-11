@@ -97,7 +97,7 @@ namespace ReSource
             this.GlobalIndex = globalIndex;          
             
             Water = WaterType.Unassigned;
-            DistanceToCoast = parentMap.windThresholdDist;   
+            DistanceToCoast = parentMap.WindThresholdDist;   
         }        
 
         public void Update(float dt)

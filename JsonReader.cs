@@ -9,26 +9,31 @@ using Newtonsoft.Json;
 namespace ReSource
 {
     class JsonReader
-    {
-        private String filePath;
-        public JsonReader(String filePath)
-        {
-            this.filePath = filePath;
-        }
-
-        public String ReadAllText()
+    {        
+        private String ReadAllText(String filePath)
         {
             return System.IO.File.ReadAllText(filePath);
         }
 
-        public T ReadJson<T>()
+        public T ReadJson<T>(String filePath)
         {
-            return JsonConvert.DeserializeObject<T>(ReadAllText());
+            T json = default(T);
+            try
+            {
+                json = JsonConvert.DeserializeObject<T>(ReadAllText(filePath));
+            }
+            catch (JsonException e)
+            {
+                Console.Write(e.Message);
+            }
+
+            return json;
+            
         }
 
-        public List<T> ReadJsonArray<T>()
+        public List<T> ReadJsonArray<T>(String filePath)
         {         
-            return JsonConvert.DeserializeObject<List<T>>(ReadAllText());
+            return JsonConvert.DeserializeObject<List<T>>(ReadAllText(filePath));
         }
     }
 }
