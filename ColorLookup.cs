@@ -3,7 +3,7 @@ using SFML.Graphics;
 
 namespace ReSource
 {
-    class ColorLookup : List<Color>
+    class ColorLookup
     {
         public static readonly List<Color> Color = new List<Color>
         {

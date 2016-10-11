@@ -8,29 +8,18 @@ namespace ReSource
 {
     class MapIO
     {
-        public void Save(WorldMap map, string path, string name)
+        private static string path = @"..\..\saves\";
+        public void Save(WorldMap map, string name)
         {
-            //string json = JsonConvert.SerializeObject(map);
+            Console.WriteLine("Saving map...");
+            string json = JsonConvert.SerializeObject(map, Formatting.Indented);
             if(!File.Exists(path + name))
             {
                 Directory.CreateDirectory(path + name);
-            }
-
-            List<string> tileJson = new List<string>();
-
-            foreach(MapTile t in map.Tiles.Values)
-            {
-                try
-                {
-                    String s = JsonConvert.SerializeObject(t);
-                    tileJson.Add(s);                    
-                } catch(JsonSerializationException e)
-                {
-                    Console.WriteLine(e.InnerException);
-                }                
-            }
+            }            
              
-            //System.IO.File.WriteAllText(path, json);
+           File.WriteAllText(path + name + Path.DirectorySeparatorChar + name + ".worldmap", json);
+            Console.WriteLine("Map successfully saved!");
         }        
     }
 }
