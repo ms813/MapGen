@@ -8,7 +8,7 @@
 	"MountainThreshold" : 0.45,
 	"WindThresholdDist" : 30,
 	"MapSize" : {
-		"X" : 128,
+		"X" : 234,
 		"Y" : 128
 	},        	
 	"RandomWalkInitialiser" : {

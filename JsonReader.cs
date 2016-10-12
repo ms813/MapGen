@@ -11,7 +11,7 @@ namespace ReSource
 {
     class JsonReader
     {        
-        private string ReadAllText(String filePath)
+        private string ReadAllText(string filePath)
         {
             try
             {
@@ -22,7 +22,7 @@ namespace ReSource
             } 
         }
 
-        public T ReadJson<T>(String filePath)
+        public T ReadJson<T>(string filePath)
         {
             T json = default(T);
             try
@@ -38,7 +38,7 @@ namespace ReSource
             
         }
 
-        public List<T> ReadJsonArray<T>(String filePath)
+        public List<T> ReadJsonArray<T>(string filePath)
         {         
             return JsonConvert.DeserializeObject<List<T>>(ReadAllText(filePath));
         }

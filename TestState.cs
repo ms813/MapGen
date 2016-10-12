@@ -29,7 +29,7 @@ namespace ReSource
         {
             double aspectRatio = (double)Game.WindowSize.X / (double)Game.WindowSize.Y;
             Vector2i mapSize = new Vector2i((int)Math.Round(aspectRatio * (double)mapY), mapY);
-            
+            Console.WriteLine(mapSize);
             MapIO mapIO = new MapIO();
             map = new WorldMap(mapIO.Load());
 

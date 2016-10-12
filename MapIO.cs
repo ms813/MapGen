@@ -43,12 +43,23 @@ namespace ReSource
                 catch (IOException e)
                 {
                     Console.ForegroundColor = ConsoleColor.Red;
-                    Console.Write("{0} was not found. ", name);
+                    Console.WriteLine("{0} was not found. ", name);
                     Console.ForegroundColor = ConsoleColor.Green;
                     Console.WriteLine("Creating a new world called {0}", name);
                    
                     mapData = LoadDefault();
                     mapData.MapName = name;
+                    Console.ForegroundColor = ConsoleColor.Cyan;
+
+                    Console.Write("World map height (default = {0}): ", mapData.MapSize.Y);
+                    string input = Console.ReadLine();
+                    mapData.MapSize.Y = String.IsNullOrEmpty(input) ? mapData.MapSize.Y : Int32.Parse(input);
+
+
+                    Console.Write("World map width (default = {0}): ", mapData.MapSize.X);
+                    input = Console.ReadLine();
+                    mapData.MapSize.X = String.IsNullOrEmpty(input) ? mapData.MapSize.X : Int32.Parse(input);
+
                     mapData.BaseSeed = new Random().Next();                                 
                 }
             }
