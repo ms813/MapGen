@@ -5,14 +5,21 @@ using System.Text;
 using System.Threading.Tasks;
 
 using Newtonsoft.Json;
+using System.IO;
 
 namespace ReSource
 {
     class JsonReader
     {        
-        private String ReadAllText(String filePath)
+        private string ReadAllText(String filePath)
         {
-            return System.IO.File.ReadAllText(filePath);
+            try
+            {
+                return File.ReadAllText(filePath);
+            } catch(IOException e)
+            {
+                throw;
+            } 
         }
 
         public T ReadJson<T>(String filePath)

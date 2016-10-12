@@ -125,7 +125,6 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="TestState.cs" />
     <Compile Include="TextureManager.cs" />
-    <Compile Include="WorldMapBuilder.cs" />
     <Compile Include="WorldMapSaveData.cs" />
   </ItemGroup>
   <ItemGroup>

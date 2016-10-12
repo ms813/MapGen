@@ -57,6 +57,7 @@ namespace ReSource
 
         public WorldMap(WorldMapSaveData mapData)
         {
+            //unpack mapData
             this.MapName = mapData.MapName;
             this.baseSeed = mapData.BaseSeed;
             this.TileSize = mapData.TileSize;
@@ -68,17 +69,22 @@ namespace ReSource
             this.MapSize = mapData.MapSize;
             this.randomWalkInitialiser = mapData.RandomWalkInitialiser;
 
-            elevationSeed = baseSeed + 1;
-            randomWalkSeed = baseSeed + 2;
-            riverSourceSeed = baseSeed + 3;
-            windDirectionSeed = baseSeed + 4;
-            windSpeedSeed = baseSeed + 5;
-            temperatureSeed = baseSeed + 6;
-            rainSeed = baseSeed + 7;
+            Init();
         }
 
-        public void Init()
+        private void Init()
         {
+            //initialise random seeds
+            Random rnd = new Random(baseSeed);
+            elevationSeed = rnd.Next();
+            randomWalkSeed = rnd.Next();
+            riverSourceSeed = rnd.Next();
+            windDirectionSeed = rnd.Next();
+            windSpeedSeed = rnd.Next();
+            temperatureSeed = rnd.Next();
+            rainSeed = rnd.Next();
+
+            //actually build the World Map
             ExecuteTimedFunction(CreateTiles);
             ExecuteTimedFunction(AssignTileNeighbours);
             ExecuteTimedFunction(() => GenerateRandomWalks(randomWalkInitialiser)
@@ -103,10 +109,10 @@ namespace ReSource
             ExecuteTimedFunction(InitialiseDisplay);
             ExecuteTimedFunction(CreateVertexArray);
 
-            Console.WriteLine("World Map build finished in {0} s", TotalBuildTime / 1000d);
-            Console.WriteLine("");
+            Console.WriteLine("{0} build finished in {1} s", MapName, TotalBuildTime / 1000d);            
+            Save();
             Console.WriteLine("--------------------");
-            Console.WriteLine("");
+            Console.WriteLine();
         }
 
         public bool IsMapBorder(MapTile t)
@@ -1230,12 +1236,8 @@ namespace ReSource
             else if(e.Code == Keyboard.Key.S)
             {
                 if(e.Control)
-                {                    
-                    string mapName = "world1";                   
-
-                    MapIO ms = new MapIO();
-                    
-                    ms.Save(GetSaveData(), mapName);
+                {
+                    Save();                    
                 }
                 else
                 {
@@ -1368,6 +1370,15 @@ namespace ReSource
                 }
             }
             return surrounding;
+        }
+
+        public void Save()
+        {
+            MapIO ms = new MapIO();
+            ms.Save(GetSaveData(), MapName);
+            Console.BackgroundColor = ConsoleColor.DarkGreen;
+            Console.WriteLine("{0} map successfully saved", MapName);
+            Console.ResetColor();
         }
 
         private WorldMapSaveData GetSaveData()
