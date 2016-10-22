@@ -133,7 +133,7 @@ namespace ReSource
             Random rnd;
             if(randomSeed == -1)
             {
-                rnd = MathHelper.rnd;
+                rnd = new Random();
             } else
             {
                 rnd = new Random(randomSeed);

@@ -10,7 +10,6 @@ namespace ReSource
 {
     class TileColourHelper
     {
-
         public void SetElevationColor(MapTile t)
         {
             Color color = new Color();

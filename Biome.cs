@@ -25,12 +25,14 @@ namespace ReSource
     {
         public static Dictionary<String, Biome> Biomes { get; private set; }      
         private static LandBiomeLookup BiomeLookup;
+        private static string biomeLookupPath = @"..\..\resources\worldGen\LandBiomeLookup.json";
+        private static string biomePath = @"..\..\resources\worldGen\biomes.json";
 
         static Biome()
         {
             Biomes = new Dictionary<string, Biome>();
-            BiomeLookup = new JsonReader(@"..\..\resources\worldGen\LandBiomeLookup.json").ReadJson<LandBiomeLookup>();
-            List<Biome> temp = new JsonReader(@"..\..\resources\worldGen\biomes.json").ReadJsonArray<Biome>();           
+            BiomeLookup = new JsonReader().ReadJson<LandBiomeLookup>(biomeLookupPath);
+            List<Biome> temp = new JsonReader().ReadJsonArray<Biome>(biomePath);           
             
             foreach (Biome b in temp)
             {

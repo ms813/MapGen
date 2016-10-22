@@ -14,41 +14,81 @@ using SFML.Window;
 namespace ReSource
 {
     class WorldMap
-    {        
-        public List<MapTile> Tiles { get; private set; }
-        private List<Vector2i> ActiveTileIndices = new List<Vector2i>();
-        private List<Landmass> LandMasses = new List<Landmass>();
+    {   
+        private List<MapTile> Tiles = new List<MapTile>();
+        private List<Vector2i> activeTileIndices = new List<Vector2i>();
+        private List<Landmass> landMasses = new List<Landmass>();
 
-        private RectangleShape HighlightShape;
-        private VertexArray vertices;
+        private List<VertexArray> randomWalks = new List<VertexArray>();
+        private VertexArray windArrows;
+
+        private RectangleShape highlightShape;
+        private VertexArray tileVisualisation;
         private VertexArray downslopeArrows;
         private bool drawDownslopes = false;
         private bool drawRandomWalks = false;
         private bool drawWind = false;
+        private bool drawHighlight = true;
+
+        private RandomWalkInitialiser randomWalkInitialiser;              
 
         //public static Font Font = new Font(@"..\..\..\resources\fonts\arial.ttf");
-        
-        public int TileSize = 32;
-        
-        public readonly double MaxElevation = 1.0d;
-        
-        public readonly double MinElevation = 0.0d;
 
-        public readonly double SeaLevel = 0.2d;
+        public int TileSize { get; private set; }
+        public double MaxElevation { get; private set; }
+        public double MinElevation { get; private set; }
+        public double SeaLevel { get; private set; }
+        public double MountainThreshold { get; private set; }       //cutoff height for a tile to be considered a mountain                                                               
+        public int WindThresholdDist { get; private set; } //threshold distance from coast for max wind
+        public Vector2i MapSize { get; private set; }
 
-        public readonly double mountainThreshold = 0.45d;       //cutoff height for a tile to be considered a mountain                                                               
-        public readonly int windThresholdDist = 30; //threshold distance from coast for max wind
+        private int baseSeed;
+        private int elevationSeed;
+        private int randomWalkSeed;
+        private int riverSourceSeed;
+        private int windDirectionSeed;
+        private int windSpeedSeed;
+        private int temperatureSeed;
+        private int rainSeed;
 
-        public Vector2i MapSize { get; private set; }        
+        private string MapName; 
 
-        public WorldMap(Vector2i mapSize)
+        private long TotalBuildTime = 0;
+
+        public WorldMap(WorldMapSaveData mapData)
         {
-            this.MapSize = mapSize;
-            Tiles = new List<MapTile>();
+            //unpack mapData
+            this.MapName = mapData.MapName;
+            this.baseSeed = mapData.BaseSeed;
+            this.TileSize = mapData.TileSize;
+            this.MaxElevation = mapData.MaxElevation;
+            this.MinElevation = mapData.MinElevation;
+            this.SeaLevel = mapData.SeaLevel;
+            this.MountainThreshold = mapData.MountainThreshold;
+            this.WindThresholdDist = mapData.WindThresholdDist;
+            this.MapSize = mapData.MapSize;
+            this.randomWalkInitialiser = mapData.RandomWalkInitialiser;
 
+            Init();
+        }
+
+        private void Init()
+        {
+            //initialise random seeds
+            Random rnd = new Random(baseSeed);
+            elevationSeed = rnd.Next();
+            randomWalkSeed = rnd.Next();
+            riverSourceSeed = rnd.Next();
+            windDirectionSeed = rnd.Next();
+            windSpeedSeed = rnd.Next();
+            temperatureSeed = rnd.Next();
+            rainSeed = rnd.Next();
+
+            //actually build the World Map
             ExecuteTimedFunction(CreateTiles);
             ExecuteTimedFunction(AssignTileNeighbours);
-            ExecuteTimedFunction(() => GenerateRandomWalks(true, true, 8,8,5), "Generate Random Walks");
+            ExecuteTimedFunction(() => GenerateRandomWalks(randomWalkInitialiser)
+                , "Generate Random Walks");
             ExecuteTimedFunction(CalculatePerlinCoefficients);
             //ExecuteTimedFunction(CalculateGaussianCoefficients);
             ExecuteTimedFunction(CalculateVoronoiCoefficients);
@@ -64,27 +104,26 @@ namespace ReSource
             ExecuteTimedFunction(CalculateTemperature);
             ExecuteTimedFunction(CreateRivers);
             ExecuteTimedFunction(CalculateRainShadow);
-            ExecuteTimedFunction(AssignRainfall);            
+            ExecuteTimedFunction(AssignRainfall);
             ExecuteTimedFunction(AssignBiomes);
             ExecuteTimedFunction(InitialiseDisplay);
             ExecuteTimedFunction(CreateVertexArray);
-             
-            Console.WriteLine("Wold Map build finished in {0} s", TotalBuildTime/1000d);
-            Console.WriteLine("");
+
+            Console.WriteLine("{0} build finished in {1} s", MapName, TotalBuildTime / 1000d);            
+            Save();
             Console.WriteLine("--------------------");
-            Console.WriteLine("");
+            Console.WriteLine();
         }
 
-        private bool IsMapBorder(MapTile t)
-        {
+        public bool IsMapBorder(MapTile t)
+        {            
             return (t.GlobalIndex.X == 0)
                 || (t.GlobalIndex.Y == 0)
                 || (t.GlobalIndex.X == MapSize.X - 1)
                 || (t.GlobalIndex.Y == MapSize.Y - 1);
         }
-
-        private long TotalBuildTime = 0;              
-        private void ExecuteTimedFunction(Action action, String msg = "")
+                    
+        private void ExecuteTimedFunction(Action action, string msg = "")
         {
             if (msg == "") msg = action.Method.Name;
 
@@ -133,14 +172,13 @@ namespace ReSource
                 }
             });
         }
-
-        List<VertexArray> randomWalks = new List<VertexArray>();
-        private void GenerateRandomWalks(bool sides, bool topBot, int edgeWalks, int midWalks, int steps)
-        {
+        
+        private void GenerateRandomWalks(RandomWalkInitialiser initialiser)
+        {  
             //generate a list of random walks that will be used to generate voronoi diagrams
 
             //add a line to the left and right sides if requested
-            if (sides)
+            if (initialiser.SideOcean)
             {
                 VertexArray left = new VertexArray(PrimitiveType.LinesStrip);
                 VertexArray right = new VertexArray(PrimitiveType.LinesStrip);
@@ -160,7 +198,7 @@ namespace ReSource
             }
 
             //add a line to the top and bottom sides if requested
-            if (topBot)
+            if (initialiser.TopBottomOcean)
             {
                 VertexArray top = new VertexArray(PrimitiveType.LinesStrip);
                 VertexArray bot = new VertexArray(PrimitiveType.LinesStrip);
@@ -178,54 +216,54 @@ namespace ReSource
 
             //generate some random walks and add them to a list
             List<Vector2i> startPositions = new List<Vector2i>();
-
+            Random random = new Random(randomWalkSeed);
             //walks start in middle 80% of map
-            for (int i = 0; i < midWalks; i++)
+            for (int i = 0; i < initialiser.MidRandomWalks; i++)
             {
-                int x = MathHelper.rnd.Next((int)Math.Round(0.8d * MapSize.X)) + (int)Math.Round(0.1d * MapSize.X);
-                int y = MathHelper.rnd.Next((int)Math.Round(0.8d * MapSize.Y)) + (int)Math.Round(0.1d * MapSize.Y);
+                int x = random.Next((int)Math.Round(0.8d * MapSize.X)) + (int)Math.Round(0.1d * MapSize.X);
+                int y = random.Next((int)Math.Round(0.8d * MapSize.Y)) + (int)Math.Round(0.1d * MapSize.Y);
                 startPositions.Add(new Vector2i(x, y));
             }
 
             //walks start from edge
-            for (int i = 0; i < edgeWalks; i++)
+            for (int i = 0; i < initialiser.EdgeRandomWalks; i++)
             {
-                int rnd = MathHelper.rnd.Next(4);
+                int rnd = random.Next(4);
                 if (rnd == 0)
                 {
                     //start on the top row
-                    startPositions.Add(new Vector2i(MathHelper.rnd.Next(MapSize.X), 0));
+                    startPositions.Add(new Vector2i(random.Next(MapSize.X), 0));
                 }
                 else if (rnd == 1)
                 {
                     //start on right column
-                    startPositions.Add(new Vector2i(MapSize.X, MathHelper.rnd.Next(MapSize.Y)));
+                    startPositions.Add(new Vector2i(MapSize.X, random.Next(MapSize.Y)));
                 }
                 else if (rnd == 2)
                 {
                     //start on bottom row
-                    startPositions.Add(new Vector2i(MathHelper.rnd.Next(MapSize.X), MapSize.Y));
+                    startPositions.Add(new Vector2i(random.Next(MapSize.X), MapSize.Y));
                 }
                 else if (rnd == 3)
                 {
                     //start on left column
-                    startPositions.Add(new Vector2i(0, MathHelper.rnd.Next(MapSize.Y)));
+                    startPositions.Add(new Vector2i(0, random.Next(MapSize.Y)));
                 }
             }
 
+            RandomWalker rndWalk = new RandomWalker(random);
+            IntRect bounds = new IntRect(0, 0, MapSize.X * TileSize, MapSize.Y * TileSize);
             foreach (Vector2i startPos in startPositions)
-            {
-                IntRect bounds = new IntRect(0, 0, MapSize.X * TileSize, MapSize.Y * TileSize);
-
+            {               
                 //randomWalks.Add(RandomWalker.GridWalk(startPos * TileSize, bounds, TileSize, steps));
                 Vector2f start = new Vector2f(startPos.X, startPos.Y) * TileSize;
-                randomWalks.Add(RandomWalker.RandomWalk(start, bounds, MapSize.Y, 10));
+                randomWalks.Add(rndWalk.RandomWalk(start, bounds, MapSize.Y, initialiser.RandomWalkSteps));
             }
         }        
 
         private void CalculatePerlinCoefficients()
         {
-            PerlinGenerator perlin = new PerlinGenerator();
+            PerlinGenerator perlin = new PerlinGenerator(elevationSeed);
             foreach(MapTile t in Tiles)
             {
                 //get Perlin noise to get base elevation value            
@@ -435,14 +473,14 @@ namespace ReSource
             List<MapTile> unassignedTiles = Tiles.Where(t => t.Water == WaterType.Unassigned).ToList();
             
             while (unassignedTiles.Count() > 0){
-                LandMasses.Add(CreateLandmass(unassignedTiles.First(), landmassCount++));
+                landMasses.Add(CreateLandmass(unassignedTiles.First(), landmassCount++));
                 unassignedTiles = Tiles.Where(t => t.Water == WaterType.Unassigned).ToList();
             }          
         }
 
         private void AssignCoast()
         {
-            foreach(Landmass lm in LandMasses)
+            foreach(Landmass lm in landMasses)
             {
                 foreach(MapTile tile in lm.Tiles)
                 {
@@ -552,7 +590,7 @@ namespace ReSource
         private void GenerateWindDirection()
         {
             //refresh the perlin generator to get new noise values
-            PerlinGenerator perlin = new PerlinGenerator();
+            PerlinGenerator perlin = new PerlinGenerator(windDirectionSeed);
 
             //assign each tile a wind direction
             foreach (MapTile t in Tiles)
@@ -589,7 +627,7 @@ namespace ReSource
         {
             //we need to generate a new noise map for the wind speed
             //so randomise the perlin generator again
-            PerlinGenerator perlin = new PerlinGenerator();
+            PerlinGenerator perlin = new PerlinGenerator(windSpeedSeed);
 
             foreach(MapTile t in Tiles)
             {
@@ -614,19 +652,19 @@ namespace ReSource
             //calculate continent wind strength based on distance to coast
             //do each land tile first
             Console.WriteLine();
-            for(int i = 0; i < LandMasses.Count; i++) { 
+            for(int i = 0; i < landMasses.Count; i++) { 
                 Console.SetCursorPosition(0, Console.CursorTop);
-                Console.Write("  Calculating distance to coast for landmass {0} of {1}", i + 1, LandMasses.Count);
+                Console.Write("  Calculating distance to coast for landmass {0} of {1}", i + 1, landMasses.Count);
 
                 //get a list of the coast tiles in each landmass
-                List<MapTile> coastTiles = LandMasses[i].GetCoastTiles();
+                List<MapTile> coastTiles = landMasses[i].GetCoastTiles();
 
                 //set the distance to the coast for these to 0
                 coastTiles.ForEach(t => t.DistanceToCoast = 0);
 
                 Parallel.ForEach(coastTiles, coastTile =>
                 {
-                    List<MapTile> surrounding = GetTilesSurrounding(coastTile, windThresholdDist);
+                    List<MapTile> surrounding = GetTilesSurrounding(coastTile, WindThresholdDist);
 
                     foreach (MapTile surroundingTile in surrounding)
                     {
@@ -643,7 +681,7 @@ namespace ReSource
             foreach(MapTile t in Tiles)
             {
                 //scale wind strength using the threshold value
-                double x = (double)t.DistanceToCoast / windThresholdDist;
+                double x = (double)t.DistanceToCoast / WindThresholdDist;
                 x = MathHelper.Clamp(x, 1, 0);
                 if(t.Water == WaterType.Ocean)
                 {
@@ -675,15 +713,14 @@ namespace ReSource
         private void CalculateTemperature()
         {
             //re-randomise the perlin generator as we will be using it to create noise
-            PerlinGenerator perlin = new PerlinGenerator();
-            double temperatureDisortionFactor = 0.5;
-            double oceanTempScaleFactor = 0.8;
+            PerlinGenerator perlin = new PerlinGenerator(temperatureSeed);
+            double temperatureDisortionFactor = 0.5d;
+            double oceanTempScaleFactor = 1.0d;
 
             foreach (MapTile t in Tiles)
             {
                 double fractionalLatitude = (double)t.GlobalIndex.Y / MapSize.Y;
-                double tBase;
-                double gaussianWidth = 2;
+                double tBase;              
                 if(fractionalLatitude < 0.5)
                 {
                     //tile is in the northern hemisphere
@@ -729,14 +766,14 @@ namespace ReSource
                 //reduce sea temperatures after finding min so as not to skew cold areas
                 if (t.Water == WaterType.Ocean)
                 {
-                    //t.Temperature *= oceanTempScaleFactor;
+                    t.Temperature *= oceanTempScaleFactor;
                 }
 
                 //make high elevation areas colder after finding min so mountains don't skew the 
                 //polar temperatures higher
-                if (t.Elevation > mountainThreshold)
+                if (t.Elevation > MountainThreshold)
                 {
-                    double fractionalEle = MathHelper.Scale(mountainThreshold, MaxElevation, 0, 1, t.Elevation);
+                    double fractionalEle = MathHelper.Scale(MountainThreshold, MaxElevation, 0, 1, t.Elevation);
                     t.Temperature *= (1 - fractionalEle);
                 }  
 
@@ -761,10 +798,11 @@ namespace ReSource
             IEnumerable<MapTile> mountains = Tiles
                 .Where(t => t.DownhillToSea                 //which have a downhill path to the sea
                     && t.Water == WaterType.Land            //which are land
-                    && t.Elevation >= mountainThreshold);   //and which are high enough to be considered mountains
-                      
+                    && t.Elevation >= MountainThreshold);   //and which are high enough to be considered mountains
+
+            Random random = new Random(riverSourceSeed);
             return mountains
-                .OrderBy(t => MathHelper.rnd.NextDouble())  //shuffle the list of mountains
+                .OrderBy(t => random.NextDouble())  //shuffle the list of mountains
                 .Take(riverCount).ToList();                 //then take the first # as required
         }
 
@@ -784,7 +822,7 @@ namespace ReSource
                         && n.RiverVolume == 0
                         && n.DownhillToSea)
                     {
-                        if (MathHelper.rnd.NextDouble() > 0.95d)
+                        if (random.NextDouble() > 0.95d)
                         {
                             nextRiverIndex = n.GlobalIndex;
                             break;
@@ -827,7 +865,7 @@ namespace ReSource
                 MapTile highestTile = tilePath.Find(pathTile => pathTile.Elevation == maxHeightInPath);
                 double rainShadowThresholdDist = 50d;
 
-                if(maxHeightInPath >= mountainThreshold)
+                if(maxHeightInPath >= MountainThreshold)
                 {
                     //there is a mountain between this tile and water, so it is in the rain shadow
 
@@ -838,7 +876,7 @@ namespace ReSource
                     dist = MathHelper.Clamp(dist, rainShadowThresholdDist, 0);
 
                     //rescale the max height to between 0 and 1
-                    double maxHeightScale = MathHelper.Scale(mountainThreshold, MaxElevation, 0, 1, maxHeightInPath);
+                    double maxHeightScale = MathHelper.Scale(MountainThreshold, MaxElevation, 0, 1, maxHeightInPath);
 
                     //scale the rain shadow with distance to the highest point in the path,
                     //and by the elevation of the highest point in the path
@@ -855,7 +893,7 @@ namespace ReSource
 
         private void AssignRainfall()
         {
-            PerlinGenerator perlin = new PerlinGenerator();
+            PerlinGenerator perlin = new PerlinGenerator(rainSeed);
             foreach(MapTile t in Tiles)
             {
                 double featureScale = MapSize.Y / 2;
@@ -892,10 +930,11 @@ namespace ReSource
             {
                 t.Biome = Biome.GetBiome(t);
                 count[t.Biome.Name]++;
-            }      
-    
-            foreach(KeyValuePair<string, int> pair in count)
-            {
+            }
+
+            Console.WriteLine();
+            foreach (KeyValuePair<string, int> pair in count)
+            {                
                 Console.WriteLine("Biome: {0}, count: {1}", pair.Key, pair.Value);
             }
         }        
@@ -911,16 +950,15 @@ namespace ReSource
             //activate tiles in the middle of the view            
             ActivateTilesAround((int)Math.Floor(MapSize.X / 2d), (int)Math.Floor(MapSize.Y / 2d), 1);
 
-            HighlightShape = new RectangleShape(new Vector2f(TileSize, TileSize));
-            HighlightShape.OutlineColor = Color.White;
-            HighlightShape.OutlineThickness = -2;
-            HighlightShape.FillColor = Color.Transparent;
+            highlightShape = new RectangleShape(new Vector2f(TileSize, TileSize));
+            highlightShape.OutlineColor = Color.White;
+            highlightShape.OutlineThickness = -2;
+            highlightShape.FillColor = Color.Transparent;
         }
-
-        VertexArray windArrows;
+                
         private void CreateVertexArray()
         {
-            vertices = new VertexArray(PrimitiveType.Quads);
+            tileVisualisation = new VertexArray(PrimitiveType.Quads);
             downslopeArrows = new VertexArray(PrimitiveType.Lines);
             windArrows = new VertexArray(PrimitiveType.Lines);
 
@@ -929,22 +967,22 @@ namespace ReSource
                 Vertex vertex = new Vertex();
                 vertex.Position = new Vector2f(tile.GlobalIndex.X, tile.GlobalIndex.Y) * TileSize;
                 vertex.Color = tile.DisplayColour;
-                vertices.Append(vertex);
+                tileVisualisation.Append(vertex);
 
                 vertex = new Vertex();
                 vertex.Position = new Vector2f(tile.GlobalIndex.X + 1, tile.GlobalIndex.Y) * TileSize;
                 vertex.Color = tile.DisplayColour;
-                vertices.Append(vertex);
+                tileVisualisation.Append(vertex);
 
                 vertex = new Vertex();
                 vertex.Position = new Vector2f(tile.GlobalIndex.X + 1, tile.GlobalIndex.Y + 1) * TileSize;
                 vertex.Color = tile.DisplayColour;
-                vertices.Append(vertex);
+                tileVisualisation.Append(vertex);
 
                 vertex = new Vertex();
                 vertex.Position = new Vector2f(tile.GlobalIndex.X, tile.GlobalIndex.Y + 1) * TileSize;
                 vertex.Color = tile.DisplayColour;
-                vertices.Append(vertex);
+                tileVisualisation.Append(vertex);
 
                 Vector2f tileCenter = new Vector2f(tile.GlobalIndex.X + 0.5f, tile.GlobalIndex.Y + 0.5f) * TileSize;
                 
@@ -1005,7 +1043,7 @@ namespace ReSource
         {
             var watch = System.Diagnostics.Stopwatch.StartNew();
             try {
-                window.Draw(vertices);
+                window.Draw(tileVisualisation);
             }
             catch (AccessViolationException e)
             {
@@ -1018,7 +1056,7 @@ namespace ReSource
            
             if (drawHighlight)
             {
-                window.Draw(HighlightShape);
+                window.Draw(highlightShape);
             }
 
             watch.Stop();
@@ -1039,21 +1077,19 @@ namespace ReSource
 
         /*
          * Check which tile the mouse is currently hovering over and highlight it
-         */
-        private Vector2i highlightedTileIndex = new Vector2i(0, 0);
-        bool drawHighlight = true;
+         */               
         public void UpdateMouseHighlight(Vector2f pos)
         {
             //find highlighted tile's index from coordinates and check for out of bounds
             int xIndex = (int) Math.Floor(pos.X / TileSize);
 
             int yIndex = (int) Math.Floor(pos.Y / TileSize);
-            
-            highlightedTileIndex = new Vector2i(xIndex, yIndex);            
+
+            Vector2i highlightedTileIndex = new Vector2i(xIndex, yIndex);            
 
             if (drawHighlight)
             {
-                HighlightShape.Position = new Vector2f(xIndex * TileSize, yIndex * TileSize);                
+                highlightShape.Position = new Vector2f(xIndex * TileSize, yIndex * TileSize);                
                 
                 MapTile t = GetTileByIndex(xIndex, yIndex);                                 
             }                      
@@ -1066,12 +1102,11 @@ namespace ReSource
 
         private MapTile GetTileByIndex(Vector2i index)
         {
-            int i = index.X * MapSize.Y + index.Y;
-            
+            int i = index.X * MapSize.Y + index.Y;            
 
-            if (index.X > 0 && index.X < MapSize.X
-                && index.Y > 0 && index.Y < MapSize.Y
-                && i > 0 && i < Tiles.Count())
+            if (index.X >= 0 && index.X < MapSize.X
+                && index.Y >= 0 && index.Y < MapSize.Y
+                && i >= 0 && i < Tiles.Count())
             {
                 return Tiles[i];
             }                       
@@ -1107,7 +1142,7 @@ namespace ReSource
 
             int x = (int)Math.Floor((double)index.X / TileSize);
             int y = (int)Math.Floor((double)index.Y / TileSize);
-            MapTile t = GetTileByIndex(x,y);
+            MapTile t = GetTileByIndex(x,y);            
             if(t != null && e.Button == Mouse.Button.Right)
             {              
                 Console.WriteLine("Clicked tileIndex: ({0}, {1}), z = {2}, water = {3}", x, y, Math.Round(t.Elevation, 2), t.Water);
@@ -1200,12 +1235,8 @@ namespace ReSource
             else if(e.Code == Keyboard.Key.S)
             {
                 if(e.Control)
-                {                    
-                    string mapName = "world1";                   
-
-                    MapIO ms = new MapIO();
-                    
-                    ms.Save(this, mapName);
+                {
+                    Save();                    
                 }
                 else
                 {
@@ -1271,7 +1302,7 @@ namespace ReSource
         
         private void ActivateTilesAround(int centerTileX, int centerTileY, int tilesY)
         {
-            ActiveTileIndices.Clear();         
+            activeTileIndices.Clear();         
             
             double defaultScale = Game.WindowSize.X / TileSize;
             int tilesX = (int)Math.Ceiling((double)Game.WindowSize.X / Game.WindowSize.Y * tilesY);            
@@ -1295,7 +1326,7 @@ namespace ReSource
                     if (x > 0 && x < MapSize.X
                         && y > 0 && y < MapSize.Y)
                     {
-                        ActiveTileIndices.Add(tileIndex);                   
+                        activeTileIndices.Add(tileIndex);                   
                     }                    
                 }
             }
@@ -1338,6 +1369,32 @@ namespace ReSource
                 }
             }
             return surrounding;
+        }
+
+        public void Save()
+        {
+            MapIO ms = new MapIO();
+            ms.Save(GetSaveData(), MapName);
+            Console.BackgroundColor = ConsoleColor.DarkGreen;
+            Console.WriteLine("{0} map successfully saved", MapName);
+            Console.ResetColor();
+        }
+
+        private WorldMapSaveData GetSaveData()
+        {
+            return new WorldMapSaveData
+            {
+                MapName = MapName,
+                BaseSeed = baseSeed,
+                TileSize = TileSize,
+                MaxElevation = MaxElevation,
+                MinElevation = MinElevation,
+                SeaLevel = SeaLevel,
+                MountainThreshold = MountainThreshold,
+                WindThresholdDist = WindThresholdDist,
+                MapSize = MapSize,
+                RandomWalkInitialiser = randomWalkInitialiser
+            };    
         }
     }
 }

@@ -12,7 +12,7 @@ namespace ReSource
 {
     class TestState : GameState
     {
-        private WorldMap map;        
+        private WorldMap worldMap;        
         public View gameView { get; private set; }        
 
         public event EventHandler<MouseMoveEventArgs> mouseMoved;
@@ -21,32 +21,31 @@ namespace ReSource
         public event EventHandler<KeyEventArgs> keyPressed;
 
         private ActionState actionState = ActionState.NONE;
-        private float ZoomLevel = 1f;        
-        private int mapY = 128;
+        private float ZoomLevel = 1f;      
         private float MaxZoom;
 
         public TestState(RenderWindow window)
         {
             double aspectRatio = (double)Game.WindowSize.X / (double)Game.WindowSize.Y;
-            Vector2i mapSize = new Vector2i((int)Math.Round(aspectRatio * (double)mapY), mapY);
-            map = new WorldMap(mapSize);            
+            MapIO mapIO = new MapIO();
+            worldMap = new WorldMap(mapIO.Load());
 
             //hook up input listeners
-            mouseMoved += new EventHandler<MouseMoveEventArgs>(map.OnMouseMoved);
-            mouseButtonPressed += new EventHandler<MouseButtonEventArgs>(map.OnMouseButtonPressed);
-            mapMoved += new EventHandler<MapMoveEventArgs>(map.OnMapMoved);
-            keyPressed += new EventHandler<KeyEventArgs>(map.OnKeyPressed);
+            mouseMoved += new EventHandler<MouseMoveEventArgs>(worldMap.OnMouseMoved);
+            mouseButtonPressed += new EventHandler<MouseButtonEventArgs>(worldMap.OnMouseButtonPressed);
+            mapMoved += new EventHandler<MapMoveEventArgs>(worldMap.OnMapMoved);
+            keyPressed += new EventHandler<KeyEventArgs>(worldMap.OnKeyPressed);
 
             gameView = new View();            
             gameView.Center = new Vector2f(
-                mapSize.X / 2 * map.TileSize,
-                mapSize.Y / 2 * map.TileSize);
+                worldMap.MapSize.X / 2 * worldMap.TileSize,
+                worldMap.MapSize.Y / 2 * worldMap.TileSize);
             gameView.Size = new Vector2f(
-                map.TileSize * window.Size.X / window.Size.Y,
-                map.TileSize);
+                worldMap.TileSize * window.Size.X / window.Size.Y,
+                worldMap.TileSize);
 
-            MaxZoom = mapY * 2;
-            ZoomLevel = mapY;
+            MaxZoom = worldMap.MapSize.Y * 2;
+            ZoomLevel = worldMap.MapSize.Y;
             gameView.Zoom(ZoomLevel);
             mapMoved(window, new MapMoveEventArgs(ZoomLevel, gameView));
         }
@@ -54,12 +53,12 @@ namespace ReSource
         public void Draw(RenderWindow window)
         {
             window.SetView(gameView);         
-            map.Draw(window);            
+            worldMap.Draw(window);            
         }
 
         public void Update(float dt)
         {
-            map.Update(dt, gameView.Center);
+            worldMap.Update(dt, gameView.Center);
         }
 
         private Vector2i panningAnchor;

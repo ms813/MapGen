@@ -1,0 +1,21 @@
+{
+	"MapName" : "defaultWorld",
+	"BaseSeed" : -1,
+	"TileSize" : 32,
+	"MaxElevation" : 1.0,
+	"MinElevation" : 0.0,
+	"SeaLevel" : 0.2,
+	"MountainThreshold" : 0.45,
+	"WindThresholdDist" : 30,
+	"MapSize" : {
+		"X" : 234,
+		"Y" : 128
+	},        	
+	"RandomWalkInitialiser" : {
+		"SideOcean"	: true,
+		"TopBottomOcean" : true,
+		"EdgeRandomWalks" : 8,
+		"MidRandomWalks" : 8,
+		"RandomWalkSteps" : 5
+	}
+}
