@@ -13,6 +13,7 @@ namespace ReSource
     {
         void Draw(RenderWindow window);
         void Update(float dt);
+        void OnClose(object sender, EventArgs e);
         void OnMouseButtonPressed(object sender, MouseButtonEventArgs e);
         void OnMouseMoved(object sender, MouseMoveEventArgs e);
         void OnKeyPressed(object sender, KeyEventArgs e);

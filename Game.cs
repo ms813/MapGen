@@ -29,7 +29,11 @@ namespace ReSource
             /*
              * Bind event handlers
              */
+            //Bind handlers for program exit
+            AppDomain.CurrentDomain.ProcessExit += new EventHandler(OnClose);
             window.Closed += new EventHandler(OnClose);
+
+            //bind keypress handlers
             window.MouseButtonPressed += new EventHandler<MouseButtonEventArgs>(OnMouseButtonPressed);
             window.MouseMoved += new EventHandler<MouseMoveEventArgs>(OnMouseMoved);
             window.KeyPressed += new EventHandler<KeyEventArgs>(OnKeyPressed);
@@ -62,6 +66,10 @@ namespace ReSource
         public void OnClose(object sender, EventArgs e)
         {
             RenderWindow window = (RenderWindow)sender;
+            foreach(GameState s in gameStates)
+            {
+                s.OnClose(sender, e);
+            }          
             window.Close();
         }
 

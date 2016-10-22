@@ -13,6 +13,7 @@ namespace ReSource
         public double MountainThreshold;
         public int WindThresholdDist;
         public Vector2i MapSize;
-        public RandomWalkInitialiser RandomWalkInitialiser;    
+        public RandomWalkInitialiser RandomWalkInitialiser;
+        public WorldCalendar WorldCalendar;
     }
 }

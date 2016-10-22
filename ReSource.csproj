@@ -112,10 +112,7 @@
     <Compile Include="MapMoveEventArgs.cs" />
     <Compile Include="MapIO.cs" />
     <Compile Include="RandomWalker.cs" />
-<<<<<<< HEAD
-=======
     <Compile Include="RandomWalkInitialiser.cs" />
->>>>>>> mapio
     <Compile Include="TileColourHelper.cs" />
     <Compile Include="WaterType.cs" />
     <Compile Include="WindHelper.cs" />
@@ -129,6 +126,7 @@
     <Compile Include="TestState.cs" />
     <Compile Include="TextureManager.cs" />
     <Compile Include="WorldMapSaveData.cs" />
+    <Compile Include="WorldCalendar.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />

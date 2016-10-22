@@ -12,7 +12,8 @@ namespace ReSource
         private static string defaultParamsPath = @"..\..\resources\worldGen\worldMapDefaultParams.worldmap";
         public void Save(WorldMapSaveData mapData, string name)
         {
-            Console.WriteLine("Saving map...");
+            Console.WriteLine();
+            Console.WriteLine("[MapIO] Saving map...");            
             string json = JsonConvert.SerializeObject(mapData, Formatting.Indented);
             if (!File.Exists(path + name))
             {
@@ -20,7 +21,9 @@ namespace ReSource
             }
 
             File.WriteAllText(path + name + Path.DirectorySeparatorChar + name + ".worldmap", json);
-            Console.WriteLine("[MapIO] Map successfully saved!");
+            Console.BackgroundColor = ConsoleColor.DarkGreen;
+            Console.WriteLine("[MapIO] {0} map successfully saved", name);
+            Console.ResetColor();
         }
 
         public WorldMapSaveData Load()
@@ -53,20 +56,23 @@ namespace ReSource
 
                     Console.Write("World map height (default = {0}): ", mapData.MapSize.Y);
                     string input = Console.ReadLine();
-                    mapData.MapSize.Y = String.IsNullOrEmpty(input) ? mapData.MapSize.Y : Int32.Parse(input);
+                    mapData.MapSize.Y = string.IsNullOrEmpty(input) ? mapData.MapSize.Y : int.Parse(input);
 
                     int defaultX = (int)Math.Round(mapData.MapSize.Y * 1.5d);
                     Console.Write("World map width (default = {0}): ", defaultX);
                     input = Console.ReadLine();
-                    mapData.MapSize.X = String.IsNullOrEmpty(input) ? defaultX : Int32.Parse(input);
+                    mapData.MapSize.X = string.IsNullOrEmpty(input) ? defaultX : int.Parse(input);
 
-                    mapData.BaseSeed = new Random().Next();                                 
+                    mapData.BaseSeed = new Random().Next();
+
+                    mapData.WorldCalendar.Unpack();                    
                 }
             }
 
             Console.ResetColor();
             return mapData;
         }
+        
       
         private WorldMapSaveData LoadDefault()
         {

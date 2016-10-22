@@ -57,8 +57,8 @@ namespace ReSource
         }
 
         public void Update(float dt)
-        {
-            worldMap.Update(dt, gameView.Center);
+        {            
+            worldMap.Update(dt);
         }
 
         private Vector2i panningAnchor;
@@ -132,6 +132,11 @@ namespace ReSource
         {
             //Console.WriteLine(e);
             keyPressed(sender, e);
-        }          
+        }
+
+        public void OnClose(object sender, EventArgs e)
+        {
+            worldMap.Save();   
+        }
     }
 }

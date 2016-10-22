@@ -14,15 +14,16 @@ using SFML.Window;
 namespace ReSource
 {
     class WorldMap
-    {   
+    {          
+        //Map Tiles
         private List<MapTile> Tiles = new List<MapTile>();
         private List<Vector2i> activeTileIndices = new List<Vector2i>();
         private List<Landmass> landMasses = new List<Landmass>();
 
-        private List<VertexArray> randomWalks = new List<VertexArray>();
-        private VertexArray windArrows;
-
+        //graphics
         private RectangleShape highlightShape;
+        private List<VertexArray> randomWalks = new List<VertexArray>();
+        private VertexArray windArrows;        
         private VertexArray tileVisualisation;
         private VertexArray downslopeArrows;
         private bool drawDownslopes = false;
@@ -30,10 +31,12 @@ namespace ReSource
         private bool drawWind = false;
         private bool drawHighlight = true;
 
-        private RandomWalkInitialiser randomWalkInitialiser;              
+        private RandomWalkInitialiser randomWalkInitialiser;
 
         //public static Font Font = new Font(@"..\..\..\resources\fonts\arial.ttf");
 
+        //World Constants
+        private string MapName;
         public int TileSize { get; private set; }
         public double MaxElevation { get; private set; }
         public double MinElevation { get; private set; }
@@ -41,7 +44,9 @@ namespace ReSource
         public double MountainThreshold { get; private set; }       //cutoff height for a tile to be considered a mountain                                                               
         public int WindThresholdDist { get; private set; } //threshold distance from coast for max wind
         public Vector2i MapSize { get; private set; }
+        private WorldCalendar worldCalendar;
 
+        //random seeds
         private int baseSeed;
         private int elevationSeed;
         private int randomWalkSeed;
@@ -49,9 +54,7 @@ namespace ReSource
         private int windDirectionSeed;
         private int windSpeedSeed;
         private int temperatureSeed;
-        private int rainSeed;
-
-        private string MapName; 
+        private int rainSeed;                
 
         private long TotalBuildTime = 0;
 
@@ -68,6 +71,7 @@ namespace ReSource
             this.WindThresholdDist = mapData.WindThresholdDist;
             this.MapSize = mapData.MapSize;
             this.randomWalkInitialiser = mapData.RandomWalkInitialiser;
+            this.worldCalendar = mapData.WorldCalendar;
 
             Init();
         }
@@ -106,8 +110,10 @@ namespace ReSource
             ExecuteTimedFunction(CalculateRainShadow);
             ExecuteTimedFunction(AssignRainfall);
             ExecuteTimedFunction(AssignBiomes);
+
+            //prepare the graphics
             ExecuteTimedFunction(InitialiseDisplay);
-            ExecuteTimedFunction(CreateVertexArray);
+            ExecuteTimedFunction(CreateVertexArray);            
 
             Console.WriteLine("{0} build finished in {1} s", MapName, TotalBuildTime / 1000d);            
             Save();
@@ -937,7 +943,7 @@ namespace ReSource
             {                
                 Console.WriteLine("Biome: {0}, count: {1}", pair.Key, pair.Value);
             }
-        }        
+        }  
 
         private void InitialiseDisplay()
         {
@@ -1063,9 +1069,12 @@ namespace ReSource
             //Console.WriteLine("Draw: {0}:", watch.ElapsedMilliseconds);
         }
 
-        public void Update(float dt, Vector2f viewCenter)
+        public void Update(float dt)
         {
             var watch = System.Diagnostics.Stopwatch.StartNew();
+
+            worldCalendar.Update(dt);            
+
             /*foreach (Vector2i tileIndex in ActiveTileIndices)
             {
                 Tiles[tileIndex].Update(dt);
@@ -1374,10 +1383,7 @@ namespace ReSource
         public void Save()
         {
             MapIO ms = new MapIO();
-            ms.Save(GetSaveData(), MapName);
-            Console.BackgroundColor = ConsoleColor.DarkGreen;
-            Console.WriteLine("{0} map successfully saved", MapName);
-            Console.ResetColor();
+            ms.Save(GetSaveData(), MapName);           
         }
 
         private WorldMapSaveData GetSaveData()
@@ -1393,7 +1399,8 @@ namespace ReSource
                 MountainThreshold = MountainThreshold,
                 WindThresholdDist = WindThresholdDist,
                 MapSize = MapSize,
-                RandomWalkInitialiser = randomWalkInitialiser
+                RandomWalkInitialiser = randomWalkInitialiser,
+                WorldCalendar = worldCalendar
             };    
         }
     }
