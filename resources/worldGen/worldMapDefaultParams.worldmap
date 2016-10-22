@@ -20,75 +20,100 @@
 	},
 	"WorldCalendar" : {
 		"HoursInDay" : 24,
+		"CurrentHour" : 0,
 		"DayOfMonth" : 1,
 		"CurrentMonth" : 2,
 		"CurrentYear" : 1,
 		"Months" : [
 			{
-				"name" : "January",
+				"Name" : "January",
 				"days" : 31
 			},
 			{
-				"name" : "February",
+				"Name" : "February",
 				"days" : 31
 			},
 			{
-				"name" : "March",
+				"Name" : "March",
 				"days" : 31
 			},
 			{
-				"name" : "April",
+				"Name" : "April",
 				"days" : 30
 			},
 			{
-				"name" : "May",
+				"Name" : "May",
 				"days" : 31
 			},
 			{
-				"name" : "June",
+				"Name" : "June",
 				"days" : 30
 			},
 			{
-				"name" : "July",
+				"Name" : "July",
 				"days" : 31
 			},
 			{
-				"name" : "August",
+				"Name" : "August",
 				"days" : 31
 			},
 			{
-				"name" : "September",
+				"Name" : "September",
 				"days" : 30
 			},
 			{
-				"name" : "October",
+				"Name" : "October",
 				"days" : 31
 			},
 			{
-				"name" : "November",
+				"Name" : "November",
 				"days" : 30
 			},
 			{
-				"name" : "December",
+				"Name" : "December",
 				"days" : 31
 			}			
 		],
 		"Seasons" : [
 			{
-				"name" : "Spring",
-				"monthIds" : [2,3,4]
+				"Name" : "Spring",
+				"monthIds" : [2,3,4],
+				"DayPhaseEndHours": {
+		          "Morning": 10,
+		          "Day": 18,
+		          "Dusk": 20,
+		          "Night": 4
+		        }
 			},
 			{
-				"name" : "Summer",
-				"monthIds" : [5,6,7]
+				"Name" : "Summer",
+				"monthIds" : [5,6,7],
+				"DayPhaseEndHours": {
+		          "Morning": 10,
+		          "Day": 18,
+		          "Dusk": 20,
+		          "Night": 4
+		        }
 			},
 			{
-				"name" : "Autumn",
-				"monthIds" : [8,9,10]
+				"Name" : "Autumn",
+				"monthIds" : [8,9,10],
+				"DayPhaseEndHours": {
+		          "Morning": 10,
+		          "Day": 18,
+		          "Dusk": 20,
+		          "Night": 4
+		        }
 			},
 			{
-				"name" : "Spring",
-				"monthIds" : [11,0,1]
+				"Name" : "Winter",
+				"monthIds" : [11,0,1],
+				"DayPhaseEndHours": {
+		          "Morning": 10,
+		          "Day": 18,
+		          "Dusk": 20,
+		          "Night": 4
+		        }
 			},
 		]
 	}

@@ -1160,7 +1160,7 @@ namespace ReSource
                 Console.WriteLine("ElevationZone: {0}", t.ElevationZone.Name);
                 Console.WriteLine("TemperatureZone: {0}", t.TemperatureZone.Name);
                 Console.WriteLine("HumidityZone: {0}", t.HumidityZone.Name);
-                Console.WriteLine("Biome: {0}", t.Biome.Name); 
+                Console.WriteLine("Biome: {0}", t.Biome.Name);                
 
                 //Console.WriteLine("Wind dir: {0}, str: {1}, distToCoast: {2}", Math.Round(t.WindDirection, 3), Math.Round(t.WindStrength, 3), t.DistanceToCoast);
                 //Console.WriteLine("DownslopeDir: ({0},{1}), Downhill to sea:{2}", t.DownslopeDir.X, t.DownslopeDir.Y, t.DownhillToSea);

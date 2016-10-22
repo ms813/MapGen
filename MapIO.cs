@@ -71,8 +71,7 @@ namespace ReSource
 
             Console.ResetColor();
             return mapData;
-        }
-        
+        }        
       
         private WorldMapSaveData LoadDefault()
         {

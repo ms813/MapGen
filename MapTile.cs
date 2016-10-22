@@ -68,6 +68,9 @@ namespace ReSource
         //Biome
         public Biome Biome { get; set; }
 
+        //Time and date
+        public double LocalHour { get; set; }
+    
         //colors for the different map views
         public Color DisplayColour;
         

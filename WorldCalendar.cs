@@ -8,10 +8,17 @@ using Newtonsoft.Json;
 
 namespace ReSource
 {
-    public class WorldCalendar
+    class WorldCalendar
     {       
         //current time
+        [JsonIgnore]
         private int currentTick = 0;
+
+        [JsonProperty]
+        public double CurrentHour { get; private set; }
+
+        [JsonIgnore]
+        public DayPhase DayPhase{ get; private set; }
 
         [JsonProperty]
         public int DayOfMonth { get; private set; }
@@ -22,8 +29,25 @@ namespace ReSource
         [JsonProperty]
         public int CurrentYear { get; private set; }
 
+        [JsonIgnore]
+        public Season CurrentSeason
+        {
+            get
+            {
+                foreach (Season s in Seasons)
+                {
+                    if (s.isInSeason(CurrentMonth))
+                    {
+                        return s;
+                    }
+                }
+                throw new Exception("Month " + Months[CurrentMonth].name + " not found in a season!");
+            }
+        }
+
         //calendar definitions
-        public readonly int TicksInHour = 1000;
+        [JsonIgnore]
+        public readonly int TicksInHour = 50;
 
         [JsonProperty]
         public int HoursInDay { get; private set; }
@@ -37,44 +61,56 @@ namespace ReSource
         public void Update(float dt)
         {
             currentTick += (int)Math.Floor(dt * 1000);
-
-            //jump to the next day
-            if(currentTick > TicksInHour)
+                        
+            //jump to the next hour
+            if(currentTick >= TicksInHour)
             {
                 currentTick = 0;
-                DayOfMonth++;               
+                CurrentHour++;
 
-                //jump to the next month
-                if (DayOfMonth > Months[CurrentMonth].days)
+                int dayPhaseEndHour = CurrentSeason.DayPhaseEndHours[DayPhase];
+                if(DayPhase != DayPhase.Night)
                 {
-                    CurrentMonth++;
-                    DayOfMonth = 1;
-
-                    //jump to the next year
-                    if(CurrentMonth >= Months.Count)
+                    if (CurrentHour > dayPhaseEndHour)
                     {
-                        CurrentYear++;
-                        CurrentMonth = 0;
+                        DayPhase++;
                     }
                 }
+                else
+                {
+                    if(CurrentHour >= CurrentSeason.DayPhaseEndHours[DayPhase.Night] 
+                        && CurrentHour <= CurrentSeason.DayPhaseEndHours[DayPhase.Morning])
+                    {
+                        DayPhase = DayPhase.Morning;
+                    }
+                }
+             
+                //jump to next day
+                if(CurrentHour >= HoursInDay)
+                {
+                    CurrentHour = 0;
+                    DayOfMonth++;
+                    //jump to the next month
+                    if (DayOfMonth > Months[CurrentMonth].days)
+                    {
+                        CurrentMonth++;
+                        DayOfMonth = 1;
+
+                        //jump to the next year
+                        if (CurrentMonth >= Months.Count)
+                        {
+                            CurrentYear++;
+                            CurrentMonth = 0;
+                        }
+                    }
+                }
+                
                 Console.SetCursorPosition(0, Console.CursorTop);
                 Console.Write(new string(' ', Console.WindowWidth - 1));
                 Console.SetCursorPosition(0, Console.CursorTop);
-                Console.Write("Date: {0} {1}, {2}", DayOfMonth, Months[CurrentMonth].name, CurrentYear);
+                Console.Write("Date: {0}:00 ({5}) on {1} {2} ({3}), Year: {4}", Math.Floor(CurrentHour), DayOfMonth, Months[CurrentMonth].name, CurrentSeason.Name, CurrentYear, DayPhase.ToString());
             }            
-        }      
-
-        public Season CurrentSeason()
-        {
-            foreach(Season s in Seasons)
-            {
-                if(s.isInSeason(CurrentMonth))
-                {
-                    return s;
-                }
-            }
-            throw new Exception("Month " + Months[CurrentMonth].name +  " not found in a season!");
-        }
+        }               
 
         //populates Season.Months from Season.MonthIds
         public void Unpack()
@@ -83,13 +119,19 @@ namespace ReSource
             {
                 foreach (int i in s.monthIds)
                 {
-                    s.months.Add(this.Months[i]);
+                    s.Months.Add(this.Months[i]);
                 }
             }
         }
+
+        public double GetCurrentHour(MapTile t)
+        {
+            double longitude = t.GlobalIndex.X / t.ParentMap.MapSize.X;
+            return (CurrentHour + currentTick/TicksInHour)* (1 + longitude);
+        }
     }
 
-    public class Month
+    class Month
     {
         [JsonProperty]
         public string name { get; private set; }
@@ -101,14 +143,17 @@ namespace ReSource
         internal Month() { }        
     }
 
-    public class Season
+    class Season
     {
         [JsonProperty]
-        public string name { get; private set; }
+        public string Name { get; private set; }
 
         [JsonIgnore]
         //populate this with actual month names/lengths using WorldCalender.Unpack()
-        public List<Month> months { get; internal set; }
+        public List<Month> Months { get; internal set; }
+
+        [JsonProperty]
+        public Dictionary<DayPhase, int> DayPhaseEndHours { get; private set; }
 
         [JsonProperty]
         //the months in each season are stored as integers in the config file
@@ -118,12 +163,17 @@ namespace ReSource
         //protect this from being instantiated elsewhere
         internal Season() {
             //instantiate this here as we are not loading directly from config file
-            months = new List<Month>();
-        }
+            Months = new List<Month>();
+        }        
 
         internal bool isInSeason(int month)
         {
             return monthIds.Contains(month);
         }
+    }
+
+    enum DayPhase
+    {
+        Morning, Day, Dusk, Night
     }
 }

@@ -1,7 +1,9 @@
 ﻿using SFML.System;
+using Newtonsoft.Json;
 
 namespace ReSource
 {
+    [JsonObject(MemberSerialization.Fields)]
     class WorldMapSaveData
     {
         public string MapName;
