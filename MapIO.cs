@@ -20,7 +20,7 @@ namespace ReSource
             }
 
             File.WriteAllText(path + name + Path.DirectorySeparatorChar + name + ".worldmap", json);
-            Console.WriteLine("Map successfully saved!");
+            Console.WriteLine("[MapIO] Map successfully saved!");
         }
 
         public WorldMapSaveData Load()
@@ -55,10 +55,10 @@ namespace ReSource
                     string input = Console.ReadLine();
                     mapData.MapSize.Y = String.IsNullOrEmpty(input) ? mapData.MapSize.Y : Int32.Parse(input);
 
-
-                    Console.Write("World map width (default = {0}): ", mapData.MapSize.X);
+                    int defaultX = (int)Math.Round(mapData.MapSize.Y * 1.5d);
+                    Console.Write("World map width (default = {0}): ", defaultX);
                     input = Console.ReadLine();
-                    mapData.MapSize.X = String.IsNullOrEmpty(input) ? mapData.MapSize.X : Int32.Parse(input);
+                    mapData.MapSize.X = String.IsNullOrEmpty(input) ? defaultX : Int32.Parse(input);
 
                     mapData.BaseSeed = new Random().Next();                                 
                 }
@@ -67,13 +67,7 @@ namespace ReSource
             Console.ResetColor();
             return mapData;
         }
-        /*
-         * mapData = LoadDefault();
-
-        //set a random seed for the new map
-        mapData.BaseSeed = new Random().Next();
-        Console.WriteLine("[MapIO] No map name specified, loading default parameters");
-        */
+      
         private WorldMapSaveData LoadDefault()
         {
             JsonReader jr = new JsonReader();

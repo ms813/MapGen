@@ -930,10 +930,11 @@ namespace ReSource
             {
                 t.Biome = Biome.GetBiome(t);
                 count[t.Biome.Name]++;
-            }      
-    
-            foreach(KeyValuePair<string, int> pair in count)
-            {
+            }
+
+            Console.WriteLine();
+            foreach (KeyValuePair<string, int> pair in count)
+            {                
                 Console.WriteLine("Biome: {0}, count: {1}", pair.Key, pair.Value);
             }
         }        
@@ -1076,8 +1077,7 @@ namespace ReSource
 
         /*
          * Check which tile the mouse is currently hovering over and highlight it
-         */       
-        
+         */               
         public void UpdateMouseHighlight(Vector2f pos)
         {
             //find highlighted tile's index from coordinates and check for out of bounds
@@ -1102,12 +1102,11 @@ namespace ReSource
 
         private MapTile GetTileByIndex(Vector2i index)
         {
-            int i = index.X * MapSize.Y + index.Y;
-            
+            int i = index.X * MapSize.Y + index.Y;            
 
-            if (index.X > 0 && index.X < MapSize.X
-                && index.Y > 0 && index.Y < MapSize.Y
-                && i > 0 && i < Tiles.Count())
+            if (index.X >= 0 && index.X < MapSize.X
+                && index.Y >= 0 && index.Y < MapSize.Y
+                && i >= 0 && i < Tiles.Count())
             {
                 return Tiles[i];
             }                       
@@ -1143,7 +1142,7 @@ namespace ReSource
 
             int x = (int)Math.Floor((double)index.X / TileSize);
             int y = (int)Math.Floor((double)index.Y / TileSize);
-            MapTile t = GetTileByIndex(x,y);
+            MapTile t = GetTileByIndex(x,y);            
             if(t != null && e.Button == Mouse.Button.Right)
             {              
                 Console.WriteLine("Clicked tileIndex: ({0}, {1}), z = {2}, water = {3}", x, y, Math.Round(t.Elevation, 2), t.Water);
