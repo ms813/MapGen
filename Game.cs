@@ -11,9 +11,9 @@ using SFML.System;
 namespace ReSource
 {
     class Game
-    {
-        private Stack<GameState> gameStates = new Stack<GameState>();
+    {        
         public static Vector2u WindowSize;
+        private static Stack<GameState> gameStates = new Stack<GameState>();
 
         public void Start()
         {
@@ -38,7 +38,7 @@ namespace ReSource
            
             window.SetFramerateLimit(60);
 
-            gameStates.Push(new TestState(window));
+            gameStates.Push(new WorldMapState(window));            
 
             Clock gameClock = new Clock();
             
@@ -89,5 +89,22 @@ namespace ReSource
         {
             gameStates.Peek().OnMouseWheelMoved(sender, e);
         }
+
+        public static void PushState(GameState state)
+        {
+            gameStates.Peek().UnbindListeners();
+
+            gameStates.Push(state);
+            state.BindListeners();
+        }
+
+        public static GameState PopState()
+        {
+            GameState state = gameStates.Pop();
+            state.UnbindListeners();
+
+            gameStates.Peek().BindListeners();
+            return state;
+        }        
     }
 }

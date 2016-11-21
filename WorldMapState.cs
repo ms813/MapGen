@@ -10,13 +10,14 @@ using SFML.System;
 
 namespace ReSource
 {
-    class TestState : GameState
+    class WorldMapState : GameState
     {
         private WorldMap worldMap;        
         public View gameView { get; private set; }        
 
         public event EventHandler<MouseMoveEventArgs> mouseMoved;
         public event EventHandler<MouseButtonEventArgs> mouseButtonPressed;
+        public event EventHandler<MouseButtonEventArgs> mouseButtonReleased;
         public event EventHandler<MapMoveEventArgs> mapMoved;
         public event EventHandler<KeyEventArgs> keyPressed;
 
@@ -24,17 +25,15 @@ namespace ReSource
         private float ZoomLevel = 1f;      
         private float MaxZoom;
 
-        public TestState(RenderWindow window)
+        public WorldMapState(RenderWindow window)
         {
             double aspectRatio = (double)Game.WindowSize.X / (double)Game.WindowSize.Y;
+
             MapIO mapIO = new MapIO();
             worldMap = new WorldMap(mapIO.Load());
 
             //hook up input listeners
-            mouseMoved += new EventHandler<MouseMoveEventArgs>(worldMap.OnMouseMoved);
-            mouseButtonPressed += new EventHandler<MouseButtonEventArgs>(worldMap.OnMouseButtonPressed);
-            mapMoved += new EventHandler<MapMoveEventArgs>(worldMap.OnMapMoved);
-            keyPressed += new EventHandler<KeyEventArgs>(worldMap.OnKeyPressed);
+            BindListeners();            
 
             gameView = new View();            
             gameView.Center = new Vector2f(
@@ -74,7 +73,12 @@ namespace ReSource
                 {
                     panningAnchor = Mouse.GetPosition((RenderWindow)sender);
                     actionState = ActionState.PANNING;                    
-                }                
+                }     
+                
+                if(actionState == ActionState.PANNING)
+                {
+                    actionState = ActionState.NONE;
+                }
             }
         }
 
@@ -88,6 +92,8 @@ namespace ReSource
                     actionState = ActionState.NONE;
                 }
             }
+
+            mouseButtonReleased(sender, e);
         }
 
         public void OnMouseMoved(object sender, MouseMoveEventArgs e)
@@ -132,6 +138,24 @@ namespace ReSource
         {
             //Console.WriteLine(e);
             keyPressed(sender, e);
-        }          
+        }
+
+        public void BindListeners()
+        {
+            mouseMoved += new EventHandler<MouseMoveEventArgs>(worldMap.OnMouseMoved);
+            mouseButtonPressed += new EventHandler<MouseButtonEventArgs>(worldMap.OnMouseButtonPressed);
+            mouseButtonReleased += new EventHandler<MouseButtonEventArgs>(worldMap.OnMouseButtonReleased);
+            mapMoved += new EventHandler<MapMoveEventArgs>(worldMap.OnMapMoved);
+            keyPressed += new EventHandler<KeyEventArgs>(worldMap.OnKeyPressed);
+        }
+
+        public void UnbindListeners()
+        {            
+            mouseMoved -= worldMap.OnMouseMoved;
+            mouseButtonPressed -= worldMap.OnMouseButtonPressed;
+            mouseButtonReleased -= worldMap.OnMouseButtonReleased;
+            mapMoved -= worldMap.OnMapMoved;
+            keyPressed -= worldMap.OnKeyPressed;
+        }
     }
 }

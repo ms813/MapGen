@@ -9,14 +9,18 @@ using SFML.Window;
 
 namespace ReSource
 {
-    interface GameState
+    public interface GameState
     {
         void Draw(RenderWindow window);
-        void Update(float dt);
+        void Update(float dt);       
+
         void OnMouseButtonPressed(object sender, MouseButtonEventArgs e);
         void OnMouseMoved(object sender, MouseMoveEventArgs e);
         void OnKeyPressed(object sender, KeyEventArgs e);
         void OnMouseButtonReleased(object sender, MouseButtonEventArgs e);
         void OnMouseWheelMoved(object sender, MouseWheelEventArgs e);
+
+        void BindListeners();
+        void UnbindListeners(); 
     }
 }
